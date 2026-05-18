@@ -14,7 +14,11 @@
       "Bash(npx tsc *)",
       "Bash(Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue)",
       "Bash(Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue)",
-      "Bash(node scripts/generateSounds.js)"
+      "Bash(node scripts/generateSounds.js)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(del \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\.git\\\\index.lock\")"
     ]
   }
 }
