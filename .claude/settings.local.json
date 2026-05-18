@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\assets\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\src\\\\constants\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\src\\\\i18n\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\src\\\\store\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\src\\\\components\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\src\\\\screens\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\src\\\\navigation\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\lkesm\\\\Desktop\\\\Kesmez\\\\TIKTIK\\\\scripts\")",
+      "Bash(npm install *)",
+      "Bash(node scripts/generateIcon.js)",
+      "Bash(npx tsc *)",
+      "Bash(Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue)",
+      "Bash(node scripts/generateSounds.js)"
+    ]
+  }
+}

@@ -1,0 +1,115 @@
+<svg width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0533"/>
+      <stop offset="50%" style="stop-color:#2D1B69"/>
+      <stop offset="100%" style="stop-color:#0d1b69"/>
+    </linearGradient>
+    <linearGradient id="cursorGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B9D"/>
+      <stop offset="100%" style="stop-color:#FF4757"/>
+    </linearGradient>
+    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD700"/>
+      <stop offset="100%" style="stop-color:#FF4757"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="textGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="roundedClip">
+      <rect width="1024" height="1024" rx="200" ry="200"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="200" fill="url(#bgGrad)"/>
+
+  <!-- Decorative grid lines -->
+  <g opacity="0.06" stroke="#A29BFE" stroke-width="1">
+    <line x1="0" y1="200" x2="1024" y2="200"/>
+    <line x1="0" y1="400" x2="1024" y2="400"/>
+    <line x1="0" y1="600" x2="1024" y2="600"/>
+    <line x1="0" y1="800" x2="1024" y2="800"/>
+    <line x1="200" y1="0" x2="200" y2="1024"/>
+    <line x1="400" y1="0" x2="400" y2="1024"/>
+    <line x1="600" y1="0" x2="600" y2="1024"/>
+    <line x1="800" y1="0" x2="800" y2="1024"/>
+  </g>
+
+  <!-- Outer glow ring -->
+  <circle cx="512" cy="430" r="260" fill="none" stroke="url(#ringGrad)" stroke-width="2" opacity="0.25"/>
+  <circle cx="512" cy="430" r="210" fill="none" stroke="#FF4757" stroke-width="1.5" opacity="0.18"/>
+
+  <!-- Center glow blob -->
+  <ellipse cx="512" cy="430" rx="180" ry="180" fill="rgba(255,71,87,0.12)"/>
+  <ellipse cx="512" cy="430" rx="120" ry="120" fill="rgba(255,71,87,0.08)"/>
+
+  <!-- Tap ripple circles -->
+  <circle cx="512" cy="430" r="290" fill="none" stroke="#FFD700" stroke-width="3" opacity="0.15" stroke-dasharray="20 15"/>
+  <circle cx="512" cy="430" r="240" fill="none" stroke="#FFD700" stroke-width="2.5" opacity="0.22" stroke-dasharray="15 10"/>
+  <circle cx="512" cy="430" r="185" fill="none" stroke="#FFD700" stroke-width="3" opacity="0.3"/>
+
+  <!-- Finger/cursor icon (pointing down) -->
+  <g filter="url(#glow)" transform="translate(512, 400)">
+    <!-- Palm -->
+    <path d="M-55,-30 C-55,-100 -30,-130 0,-130 C30,-130 55,-100 55,-30 L55,60 C55,100 30,130 0,130 C-30,130 -55,100 -55,60 Z"
+          fill="url(#cursorGrad)" opacity="0.95"/>
+    <!-- Knuckle lines -->
+    <line x1="-30" y1="20" x2="30" y2="20" stroke="rgba(255,255,255,0.25)" stroke-width="3" stroke-linecap="round"/>
+    <line x1="-28" y1="50" x2="28" y2="50" stroke="rgba(255,255,255,0.2)" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Fingernail highlight -->
+    <ellipse cx="0" cy="-100" rx="28" ry="18" fill="rgba(255,255,255,0.3)" rx="14"/>
+    <!-- Tip highlight -->
+    <ellipse cx="0" cy="-110" rx="18" ry="10" fill="rgba(255,255,255,0.2)"/>
+  </g>
+
+  <!-- Click sparkles -->
+  <g fill="#FFD700" opacity="0.9">
+    <polygon points="340,310 346,326 363,326 350,336 355,352 340,342 325,352 330,336 317,326 334,326" transform="scale(0.8) translate(80,0)"/>
+    <polygon points="680,280 685,294 700,294 688,302 693,316 680,308 667,316 672,302 660,294 675,294" transform="scale(0.7)"/>
+    <polygon points="730,500 734,512 747,512 737,519 741,531 730,524 719,531 723,519 713,512 726,512" transform="scale(0.65)"/>
+  </g>
+
+  <!-- Small decorative dots -->
+  <g fill="#A29BFE" opacity="0.6">
+    <circle cx="240" cy="350" r="5"/>
+    <circle cx="790" cy="380" r="4"/>
+    <circle cx="200" cy="550" r="6"/>
+    <circle cx="820" cy="540" r="5"/>
+    <circle cx="310" cy="600" r="4"/>
+    <circle cx="720" cy="600" r="6"/>
+  </g>
+
+  <!-- "TıkTık" main text -->
+  <text x="512" y="740"
+        font-family="Arial Black, Impact, sans-serif"
+        font-size="136"
+        font-weight="900"
+        text-anchor="middle"
+        fill="white"
+        filter="url(#textGlow)"
+        letter-spacing="-3">TıkTık</text>
+
+  <!-- Text underline accent -->
+  <rect x="280" y="758" width="464" height="5" rx="3" fill="url(#ringGrad)" opacity="0.8"/>
+
+  <!-- Version badge -->
+  <rect x="430" y="800" width="164" height="44" rx="22" fill="rgba(255,71,87,0.85)"/>
+  <text x="512" y="829"
+        font-family="Arial, sans-serif"
+        font-size="24"
+        font-weight="700"
+        text-anchor="middle"
+        fill="white">V 0.1</text>
+
+  <!-- Corner decorations -->
+  <text x="105" y="160" font-size="48" opacity="0.3">🟢</text>
+  <text x="840" y="155" font-size="48" opacity="0.3">💀</text>
+  <text x="90" y="870" font-size="40" opacity="0.25">👾</text>
+  <text x="845" y="870" font-size="40" opacity="0.25">🐉</text>
+</svg>
