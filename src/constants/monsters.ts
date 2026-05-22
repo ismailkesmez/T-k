@@ -1,6 +1,7 @@
 export interface Monster {
   id: number;
   name: string;
+  nameKey: string;
   emoji: string;
   image: number | null;    // require(...) sonucu — null ise emoji kullanılır
   bgImage: number | null;  // require(...) sonucu — null ise düz renk kullanılır
@@ -27,6 +28,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 1,
     name: 'Slime',
+    nameKey: 'monster_name_1',
     emoji: '🟢',
     image: require('../../assets/monsters/monster_1.png'),
     bgImage: require('../../assets/monsters/bg_1.png'),
@@ -51,6 +53,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 2,
     name: 'Kurt',
+    nameKey: 'monster_name_2',
     emoji: '🐺',
     image: require('../../assets/monsters/monster_2.png'),
     bgImage: require('../../assets/monsters/bg_2.png'),
@@ -75,11 +78,12 @@ export const MONSTERS: Monster[] = [
   {
     id: 3,
     name: 'Golem',
+    nameKey: 'monster_name_3',
     emoji: '🗿',
     image: require('../../assets/monsters/monster_3.png'),
     bgImage: require('../../assets/monsters/bg_3.png'),
     imagePosition: 'center',
-    imageOffsetY: 40,
+    imageOffsetY: 60,
     imageScale: 1,
     level: 3,
     requiredXp: 1000,
@@ -99,6 +103,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 4,
     name: 'Yaratık Avcısı',
+    nameKey: 'monster_name_4',
     emoji: '🏹',
     image: require('../../assets/monsters/monster_4.png'),
     bgImage: require('../../assets/monsters/bg_4.png'),
@@ -123,6 +128,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 5,
     name: 'Cadı',
+    nameKey: 'monster_name_5',
     emoji: '🧙‍♀️',
     image: require('../../assets/monsters/monster_5.png'),
     bgImage: require('../../assets/monsters/bg_5.png'),
@@ -147,6 +153,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 6,
     name: 'Vampir',
+    nameKey: 'monster_name_6',
     emoji: '🧛',
     image: require('../../assets/monsters/monster_6.png'),
     bgImage: require('../../assets/monsters/bg_6.png'),
@@ -171,6 +178,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 7,
     name: 'Ölü Kral',
+    nameKey: 'monster_name_7',
     emoji: '💀',
     image: require('../../assets/monsters/monster_7.png'),
     bgImage: require('../../assets/monsters/bg_7.png'),
@@ -195,6 +203,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 8,
     name: 'İblis',
+    nameKey: 'monster_name_8',
     emoji: '😈',
     image: require('../../assets/monsters/monster_8.png'),
     bgImage: require('../../assets/monsters/bg_8.png'),
@@ -219,6 +228,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 9,
     name: 'İblis Kral',
+    nameKey: 'monster_name_9',
     emoji: '👹',
     image: require('../../assets/monsters/monster_9.png'),
     bgImage: require('../../assets/monsters/bg_9.png'),
@@ -243,6 +253,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 10,
     name: 'Melek',
+    nameKey: 'monster_name_10',
     emoji: '👼',
     image: require('../../assets/monsters/monster_10.png'),
     bgImage: require('../../assets/monsters/bg_10.png'),
@@ -267,6 +278,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 11,
     name: 'Goblin Kral',
+    nameKey: 'monster_name_11',
     emoji: '👺',
     image: require('../../assets/monsters/monster_11.png'),
     bgImage: require('../../assets/monsters/bg_11.png'),
@@ -291,6 +303,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 12,
     name: 'Trol',
+    nameKey: 'monster_name_12',
     emoji: '👾',
     image: require('../../assets/monsters/monster_12.png'),
     bgImage: require('../../assets/monsters/bg_12.png'),
@@ -306,7 +319,7 @@ export const MONSTERS: Monster[] = [
     hitRewardXp: 12,
     bubbleEmoji: '🪨',
     bubbleHeal: 10000,
-    bubbleCount: 11,
+    bubbleCount: 12,
     hpRegenPerSec: 150,
     color: '#8B7355',
     bgColor: 'rgba(139,115,85,0.12)',
@@ -315,6 +328,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 13,
     name: 'Elemental',
+    nameKey: 'monster_name_13',
     emoji: '⚡',
     image: require('../../assets/monsters/monster_13.png'),
     bgImage: require('../../assets/monsters/bg_13.png'),
@@ -330,7 +344,7 @@ export const MONSTERS: Monster[] = [
     hitRewardXp: 13,
     bubbleEmoji: '⚡',
     bubbleHeal: 14000,
-    bubbleCount: 12,
+    bubbleCount: 13,
     hpRegenPerSec: 200,
     color: '#FFC312',
     bgColor: 'rgba(255,195,18,0.12)',
@@ -339,11 +353,12 @@ export const MONSTERS: Monster[] = [
   {
     id: 14,
     name: 'Mini Ejderha',
+    nameKey: 'monster_name_14',
     emoji: '🐲',
     image: require('../../assets/monsters/monster_14.png'),
     bgImage: require('../../assets/monsters/bg_14.png'),
     imagePosition: 'center',
-    imageOffsetY: 10,
+    imageOffsetY: 40,
     imageScale: 1,
     level: 14,
     requiredXp: 40000,
@@ -354,7 +369,7 @@ export const MONSTERS: Monster[] = [
     hitRewardXp: 14,
     bubbleEmoji: '🔥',
     bubbleHeal: 18000,
-    bubbleCount: 12,
+    bubbleCount: 14,
     hpRegenPerSec: 250,
     color: '#FF6348',
     bgColor: 'rgba(255,99,72,0.12)',
@@ -363,6 +378,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 15,
     name: 'Kurtadam',
+    nameKey: 'monster_name_15',
     emoji: '🐺',
     image: require('../../assets/monsters/monster_15.png'),
     bgImage: require('../../assets/monsters/bg_15.png'),
@@ -378,7 +394,7 @@ export const MONSTERS: Monster[] = [
     hitRewardXp: 15,
     bubbleEmoji: '🌕',
     bubbleHeal: 23000,
-    bubbleCount: 13,
+    bubbleCount: 15,
     hpRegenPerSec: 300,
     color: '#74B9FF',
     bgColor: 'rgba(116,185,255,0.12)',
@@ -387,6 +403,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 16,
     name: 'Minotor',
+    nameKey: 'monster_name_16',
     emoji: '🐂',
     image: require('../../assets/monsters/monster_16.png'),
     bgImage: require('../../assets/monsters/bg_16.png'),
@@ -402,7 +419,7 @@ export const MONSTERS: Monster[] = [
     hitRewardXp: 16,
     bubbleEmoji: '🪓',
     bubbleHeal: 29000,
-    bubbleCount: 13,
+    bubbleCount: 16,
     hpRegenPerSec: 380,
     color: '#D63031',
     bgColor: 'rgba(214,48,49,0.12)',
@@ -411,6 +428,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 17,
     name: 'Canlı Ağaç',
+    nameKey: 'monster_name_17',
     emoji: '🌳',
     image: require('../../assets/monsters/monster_17.png'),
     bgImage: require('../../assets/monsters/bg_17.png'),
@@ -426,7 +444,7 @@ export const MONSTERS: Monster[] = [
     hitRewardXp: 17,
     bubbleEmoji: '🍃',
     bubbleHeal: 36000,
-    bubbleCount: 14,
+    bubbleCount: 17,
     hpRegenPerSec: 500,
     color: '#00B894',
     bgColor: 'rgba(0,184,148,0.12)',
@@ -435,6 +453,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 18,
     name: 'Ogre',
+    nameKey: 'monster_name_18',
     emoji: '👿',
     image: require('../../assets/monsters/monster_18.png'),
     bgImage: require('../../assets/monsters/bg_18.png'),
@@ -450,7 +469,7 @@ export const MONSTERS: Monster[] = [
     hitRewardXp: 18,
     bubbleEmoji: '🦴',
     bubbleHeal: 44000,
-    bubbleCount: 14,
+    bubbleCount: 18,
     hpRegenPerSec: 650,
     color: '#6C5CE7',
     bgColor: 'rgba(108,92,231,0.12)',
@@ -459,6 +478,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 19,
     name: 'Ejderha',
+    nameKey: 'monster_name_19',
     emoji: '🐉',
     image: require('../../assets/monsters/monster_19.png'),
     bgImage: require('../../assets/monsters/bg_19.png'),
@@ -474,7 +494,7 @@ export const MONSTERS: Monster[] = [
     hitRewardXp: 19,
     bubbleEmoji: '🐉',
     bubbleHeal: 55000,
-    bubbleCount: 15,
+    bubbleCount: 19,
     hpRegenPerSec: 800,
     color: '#E84393',
     bgColor: 'rgba(232,67,147,0.12)',
@@ -483,6 +503,7 @@ export const MONSTERS: Monster[] = [
   {
     id: 20,
     name: 'Baş Melek',
+    nameKey: 'monster_name_20',
     emoji: '🌟',
     image: require('../../assets/monsters/monster_20.png'),
     bgImage: require('../../assets/monsters/bg_20.png'),

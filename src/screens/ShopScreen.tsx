@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useGameStore } from '../store/gameStore';
+import { getMonsterById } from '../constants/monsters';
 import {
   IDLE_SYSTEMS,
   getClickPowerCost,
@@ -498,15 +499,10 @@ export default function ShopScreen() {
                       const unlocked = levelOk && defeatsOk;
                       const canAfford = (weapon.cost === 0 || tikTik >= weapon.cost) &&
                         (!weapon.xpCost || xp >= weapon.xpCost);
-                      const monsterNames: Record<number, string> = {
-                        1: 'Slime',
-                        10: lang === 'tr' ? 'Melek' : 'Angel',
-                        14: lang === 'tr' ? 'Mini Ejderha' : 'Mini Dragon',
-                      };
                       const lockLabel = !levelOk
                         ? (lang === 'tr' ? `Lv.${weapon.requiresLevel} gerekli` : `Requires Lv.${weapon.requiresLevel}`)
                         : !defeatsOk
-                        ? `${monsterNames[weapon.requiresMonsterDefeats!.monsterId] ?? '?'} ${getDefeatedCount(weapon.requiresMonsterDefeats!.monsterId)}/${weapon.requiresMonsterDefeats!.count}`
+                        ? `${t(lang, getMonsterById(weapon.requiresMonsterDefeats!.monsterId).nameKey as any)} ${getDefeatedCount(weapon.requiresMonsterDefeats!.monsterId)}/${weapon.requiresMonsterDefeats!.count}`
                         : '';
                       const costLabel = weapon.xpCost
                         ? `${weapon.cost.toLocaleString()} TT + ${weapon.xpCost.toLocaleString()} XP`

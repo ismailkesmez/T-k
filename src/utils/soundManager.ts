@@ -1,4 +1,5 @@
 import { Audio } from 'expo-av';
+import { useGameStore } from '../store/gameStore';
 
 const soundFiles: Record<number, number> = {
   1:  require('../../assets/sounds/monster_1.wav'),
@@ -40,6 +41,7 @@ export async function preloadSounds(): Promise<void> {
 }
 
 export function playMonsterSound(monsterId: number): void {
+  if (!useGameStore.getState().soundEnabled) return;
   const resolvedId = soundAliases[monsterId] ?? monsterId;
   const sound = cache[resolvedId];
   if (!sound) return;

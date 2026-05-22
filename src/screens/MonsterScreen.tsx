@@ -346,7 +346,7 @@ export default function MonsterScreen() {
       {/* Monster info row */}
       <View style={styles.monsterInfo}>
         <Text style={[styles.monsterName, { color: monster.color }]}>
-          {monster.name}
+          {t(lang, monster.nameKey as any)}
         </Text>
         <Text style={styles.monsterLevel}>Lvl {monster.level}</Text>
       </View>
@@ -501,7 +501,7 @@ export default function MonsterScreen() {
                     )}
                     <View style={styles.monsterRowInfo}>
                       <Text style={[styles.monsterRowName, { color: unlocked ? m.color : COLORS.TEXT_MUTED }]}>
-                        {unlocked ? m.name : t(lang, 'ach_locked')}
+                        {unlocked ? t(lang, m.nameKey as any) : t(lang, 'ach_locked')}
                       </Text>
                       <Text style={styles.monsterRowSub}>
                         {unlocked

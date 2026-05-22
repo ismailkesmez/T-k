@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal,
-  Alert, TextInput, ScrollView,
+  Alert, TextInput, ScrollView, Switch,
 } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { ACHIEVEMENTS } from '../constants/achievements';
 import { LEVEL_XP_THRESHOLDS, getLevelFromXp } from '../constants/monsters';
+import { WEAPONS } from '../constants/shop';
 import { t } from '../i18n';
 import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 
@@ -18,6 +19,8 @@ export default function SettingsScreen() {
   const lang = useGameStore((s) => s.language);
   const setLanguage = useGameStore((s) => s.setLanguage);
   const resetGame = useGameStore((s) => s.resetGame);
+  const soundEnabled = useGameStore((s) => s.soundEnabled);
+  const setSoundEnabled = useGameStore((s) => s.setSoundEnabled);
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -130,6 +133,17 @@ export default function SettingsScreen() {
     Alert.alert('✓', 'Tüm canavarlar açıldı!');
   };
 
+  const handleUnlockAllWeapons = () => {
+    const allWeaponIds = WEAPONS.map((w) => w.id);
+    useGameStore.setState({
+      silahTuccariPurchased: true,
+      purchasedWeapons: allWeaponIds,
+      kutsalKilicPurchased: true,
+      kutsalKilicUnlocked: true,
+    });
+    Alert.alert('✓', 'Tüm silahlar açıldı!');
+  };
+
   const handleUnlockAllAchievements = () => {
     const s = useGameStore.getState();
     const allUnlocked = ACHIEVEMENTS.map((a) => {
@@ -168,6 +182,22 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* Ses */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t(lang, 'settings_sound' as any)}</Text>
+        <View style={styles.soundRow}>
+          <Text style={styles.soundLabel}>
+            {soundEnabled ? t(lang, 'settings_sound_on' as any) : t(lang, 'settings_sound_off' as any)}
+          </Text>
+          <Switch
+            value={soundEnabled}
+            onValueChange={setSoundEnabled}
+            trackColor={{ false: COLORS.BORDER, true: COLORS.PRIMARY + '88' }}
+            thumbColor={soundEnabled ? COLORS.PRIMARY : COLORS.TEXT_MUTED}
+          />
+        </View>
+      </View>
+
       {/* Tehlikeli Bölge */}
       <View style={[styles.section, styles.dangerSection]}>
         <Text style={[styles.sectionTitle, { color: COLORS.PRIMARY }]}>
@@ -187,7 +217,7 @@ export default function SettingsScreen() {
       {/* Uygulama bilgisi */}
       <View style={styles.appInfo}>
         <Text style={styles.appName}>TıkTık</Text>
-        <Text style={styles.appVersion}>{t(lang, 'settings_version')} V0.2</Text>
+        <Text style={styles.appVersion}>{t(lang, 'settings_version')} V0.3</Text>
         <Text style={styles.appBy}>{t(lang, 'settings_by')} Kesmez</Text>
       </View>
 
@@ -323,6 +353,10 @@ export default function SettingsScreen() {
                 <Text style={styles.adminAchBtnText}>👾 Tüm Canavarları Aç</Text>
               </TouchableOpacity>
               <View style={{ height: SPACING.SM }} />
+              <TouchableOpacity style={styles.adminAchBtn} onPress={handleUnlockAllWeapons}>
+                <Text style={styles.adminAchBtnText}>⚔️ Tüm Silahları Aç</Text>
+              </TouchableOpacity>
+              <View style={{ height: SPACING.SM }} />
               <TouchableOpacity style={styles.adminAchBtn} onPress={handleUnlockAllAchievements}>
                 <Text style={styles.adminAchBtnText}>🏆 Tüm Başarıları Aç</Text>
               </TouchableOpacity>
@@ -350,6 +384,18 @@ const styles = StyleSheet.create({
   },
   dangerSection: { borderColor: COLORS.PRIMARY + '44' },
   sectionTitle: { ...FONTS.SUBHEADING, marginBottom: SPACING.MD },
+  soundRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.BG_ELEVATED,
+    borderRadius: RADIUS.MD,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: SPACING.SM,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+  },
+  soundLabel: { fontSize: 15, fontWeight: '700', color: COLORS.TEXT },
   langRow: { flexDirection: 'row', gap: SPACING.SM },
   langBtn: {
     flex: 1,

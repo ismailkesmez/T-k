@@ -44,6 +44,8 @@ export interface GameState {
   silahTuccariPurchased: boolean;
   purchasedWeapons: string[];
   equippedWeapons: string[];
+  defeatedMonsters: number[];
+  soundEnabled: boolean;
 
   setNickname: (nickname: string) => void;
   checkDailyStreak: () => void;
@@ -75,6 +77,7 @@ export interface GameState {
   purchaseWeapon: (weaponId: string) => boolean;
   equipWeapon: (weaponId: string) => boolean;
   unequipWeapon: (weaponId: string) => void;
+  setSoundEnabled: (enabled: boolean) => void;
 }
 
 export const DEFAULT_STATE = {
@@ -110,6 +113,8 @@ export const DEFAULT_STATE = {
   silahTuccariPurchased: false,
   purchasedWeapons: [] as string[],
   equippedWeapons: [] as string[],
+  defeatedMonsters: [] as number[],
+  soundEnabled: true,
 };
 
 function checkAchievements(state: Partial<GameState>): AchievementState[] {
@@ -133,11 +138,11 @@ function checkAchievements(state: Partial<GameState>): AchievementState[] {
   return updated;
 }
 
-function unlockMonsters(xp: number, current: number[]): number[] {
+function unlockMonsters(xp: number, current: number[], defeated: number[]): number[] {
   const updated = [...current];
   for (const m of MONSTERS) {
     if (m.id === 20) continue; // sadece Melek yenilince açılır
-    if (xp >= m.requiredXp && !updated.includes(m.id)) {
+    if (xp >= m.requiredXp && !updated.includes(m.id) && (m.id === 1 || defeated.includes(m.id - 1))) {
       updated.push(m.id);
     }
   }
@@ -153,7 +158,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const s = get();
     const xp = s.xp + amount;
     const level = getLevelFromXp(xp);
-    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters);
+    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters, s.defeatedMonsters);
     const next = { ...s, xp, level, unlockedMonsters };
     set({ xp, level, unlockedMonsters, unlockedAchievements: checkAchievements(next) });
   },
@@ -229,7 +234,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const totalTikTikEarned = s.totalTikTikEarned + tikTikReward;
     const xp = s.xp + xpReward;
     const level = getLevelFromXp(xp);
-    let unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters);
+    const defeatedMonsters = monsterId != null && !s.defeatedMonsters.includes(monsterId)
+      ? [...s.defeatedMonsters, monsterId]
+      : s.defeatedMonsters;
+    let unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters, defeatedMonsters);
     const melekDefeatedCount = monsterId === 10 ? s.melekDefeatedCount + 1 : s.melekDefeatedCount;
     const goblinKralDefeatedCount = monsterId === 11 ? s.goblinKralDefeatedCount + 1 : s.goblinKralDefeatedCount;
     const miniEjderhaDefeatedCount = monsterId === 14 ? s.miniEjderhaDefeatedCount + 1 : s.miniEjderhaDefeatedCount;
@@ -240,7 +248,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
       unlockedMonsters = [...unlockedMonsters, 20];
     }
     const kutsalKilicUnlocked = basMelekUnlocks ? true : s.kutsalKilicUnlocked;
-    const next = { ...s, totalMonstersDefeated, tikTik, totalTikTikEarned, xp, level, unlockedMonsters, kutsalKilicUnlocked, melekDefeatedCount, goblinKralDefeatedCount, miniEjderhaDefeatedCount, slimeDefeatedCount };
+    const next = { ...s, totalMonstersDefeated, tikTik, totalTikTikEarned, xp, level, unlockedMonsters, defeatedMonsters, kutsalKilicUnlocked, melekDefeatedCount, goblinKralDefeatedCount, miniEjderhaDefeatedCount, slimeDefeatedCount };
     set({ ...next, unlockedAchievements: checkAchievements(next) });
   },
 
@@ -264,7 +272,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const totalTikTikEarned = s.totalTikTikEarned + achDef.rewardTikTik;
     const xp = s.xp + achDef.rewardXp;
     const level = getLevelFromXp(xp);
-    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters);
+    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters, s.defeatedMonsters);
     set({ unlockedAchievements, tikTik, totalTikTikEarned, xp, level, unlockedMonsters });
   },
 
@@ -316,7 +324,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     if (buffer === 0) return;
     const xp = s.xp + buffer;
     const level = getLevelFromXp(xp);
-    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters);
+    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters, s.defeatedMonsters);
     const next = { ...s, xp, level, unlockedMonsters, idleXpBuffer: 0 };
     set({ xp, level, unlockedMonsters, idleXpBuffer: 0, unlockedAchievements: checkAchievements(next) });
   },
@@ -382,7 +390,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     if (gain <= 0) return false;
     const xp = s.xp + gain;
     const level = getLevelFromXp(xp);
-    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters);
+    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters, s.defeatedMonsters);
     set({ tikTik: s.tikTik - amount, xp, level, unlockedMonsters });
     return true;
   },
@@ -434,6 +442,8 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const s = get();
     set({ equippedWeapons: s.equippedWeapons.filter((id) => id !== weaponId) });
   },
+
+  setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
 }));
 
 // ─── Persistence (manual, no middleware) ──────────────────────────────────────
@@ -445,7 +455,7 @@ const PERSIST_KEYS: (keyof typeof DEFAULT_STATE)[] = [
   'activeMonsterId', 'unlockedMonsters', 'purchasedIdleSystems',
   'unlockedAchievements', 'offlineProgression', 'language', 'idleXpBuffer', 'kutsalKilicUnlocked', 'kutsalKilicPurchased', 'xpStorageLevel',
   'dailyStreak', 'lastLoginDate', 'melekDefeatedCount', 'tikGunLevel', 'goblinKralDefeatedCount', 'miniEjderhaDefeatedCount', 'slimeDefeatedCount', 'dovizciPurchased',
-  'silahTuccariPurchased', 'purchasedWeapons', 'equippedWeapons',
+  'silahTuccariPurchased', 'purchasedWeapons', 'equippedWeapons', 'defeatedMonsters', 'soundEnabled',
 ];
 
 export async function loadPersistedState(): Promise<void> {
@@ -453,6 +463,10 @@ export async function loadPersistedState(): Promise<void> {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (raw) {
       const saved = JSON.parse(raw);
+      // Migration: mevcut kayıtlarda defeatedMonsters yoksa unlockedMonsters'dan türet
+      if (!saved.defeatedMonsters) {
+        saved.defeatedMonsters = [...(saved.unlockedMonsters ?? [1])];
+      }
       useGameStore.setState(saved);
     }
   } catch (_) {
