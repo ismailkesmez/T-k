@@ -126,7 +126,7 @@ export default function SettingsScreen() {
   };
 
   const handleUnlockAllMonsters = () => {
-    useGameStore.setState({ unlockedMonsters: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] });
+    useGameStore.setState({ unlockedMonsters: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] });
     Alert.alert('✓', 'Tüm canavarlar açıldı!');
   };
 
@@ -187,7 +187,7 @@ export default function SettingsScreen() {
       {/* Uygulama bilgisi */}
       <View style={styles.appInfo}>
         <Text style={styles.appName}>TıkTık</Text>
-        <Text style={styles.appVersion}>{t(lang, 'settings_version')} V0.1</Text>
+        <Text style={styles.appVersion}>{t(lang, 'settings_version')} V0.2</Text>
         <Text style={styles.appBy}>{t(lang, 'settings_by')} Kesmez</Text>
       </View>
 

@@ -15,7 +15,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { getMonsterById, MONSTERS, getNextLevelXp } from '../constants/monsters';
-import { IDLE_SYSTEMS, MULTI_TOUCH_MULTIPLIERS, getXpStorageCapacity, CLICK_POWER_DAMAGE } from '../constants/shop';
+import { IDLE_SYSTEMS, MULTI_TOUCH_MULTIPLIERS, getXpStorageCapacity, CLICK_POWER_DAMAGE, getTikGunPerHit, WEAPONS } from '../constants/shop';
 import { playMonsterSound } from '../utils/soundManager';
 import HPBar from '../components/HPBar';
 import FloatingText, { FloatingItem } from '../components/FloatingText';
@@ -52,11 +52,17 @@ export default function MonsterScreen() {
   const xpStorageLevel = useGameStore((s) => s.xpStorageLevel);
   const kutsalKilicUnlocked = useGameStore((s) => s.kutsalKilicUnlocked);
   const kutsalKilicPurchased = useGameStore((s) => s.kutsalKilicPurchased);
+  const tikGunLevel = useGameStore((s) => s.tikGunLevel);
+  const equippedWeapons = useGameStore((s) => s.equippedWeapons);
 
   const [showKutsalKilic, setShowKutsalKilic] = useState(false);
+  const [bubblesSuppressed, setBubblesSuppressed] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bubbleSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const monster = getMonsterById(activeMonsterId);
   const bubbleSize = Math.max(20, Math.round(58 - (monster.bubbleCount - 1) * 3));
+  const slimeKilicEquipped = equippedWeapons.includes('slime_sword');
 
   const [hp, setHp] = useState(monster.maxHp);
   const [showMonsterPicker, setShowMonsterPicker] = useState(false);
@@ -70,14 +76,25 @@ export default function MonsterScreen() {
   const defeatAnim = useRef(new Animated.Value(1)).current;
   const processedTouchIds = useRef(new Set<number | string>());
 
-  // Reset HP when monster changes
+  // Reset HP when monster changes; also cancel any active bubble suppression
   useEffect(() => {
     const maxHp = getMonsterById(activeMonsterId).maxHp;
     hpRef.current = maxHp;
     setHp(maxHp);
     hitCounterRef.current = 0;
     kutsalHitCounterRef.current = 0;
+    setBubblesSuppressed(false);
+    if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+    if (bubbleSuppressTimerRef.current) { clearTimeout(bubbleSuppressTimerRef.current); bubbleSuppressTimerRef.current = null; }
   }, [activeMonsterId]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      if (bubbleSuppressTimerRef.current) clearTimeout(bubbleSuppressTimerRef.current);
+    };
+  }, []);
 
   // HP regen
   useEffect(() => {
@@ -131,9 +148,21 @@ export default function MonsterScreen() {
   };
 
   const touchMultiplier = MULTI_TOUCH_MULTIPLIERS[maxMultiTouch - 1] ?? 1;
+  const weaponDamageMultiplier = 1 + WEAPONS.reduce((acc, w) =>
+    equippedWeapons.includes(w.id) && w.bonusType === 'damage_percent' ? acc + w.bonusValue : acc, 0);
 
   const onTouchStart = (e: GestureResponderEvent) => {
     const changedTouches = Array.from(e.nativeEvent.changedTouches);
+
+    // Long-press detection for Slime Kılıcı (3s hold → suppress bubbles for 10s)
+    if (slimeKilicEquipped && processedTouchIds.current.size === 0 && !bubblesSuppressed) {
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null;
+        setBubblesSuppressed(true);
+        if (bubbleSuppressTimerRef.current) clearTimeout(bubbleSuppressTimerRef.current);
+        bubbleSuppressTimerRef.current = setTimeout(() => setBubblesSuppressed(false), 10000);
+      }, 3000);
+    }
 
     const processable = changedTouches;
 
@@ -146,8 +175,8 @@ export default function MonsterScreen() {
       const tx = touch.locationX;
       const ty = touch.locationY;
 
-      // Check bubble hit
-      const hitBubble = bubbles.find(
+      // Check bubble hit (skip when Slime Kılıcı suppression is active)
+      const hitBubble = !bubblesSuppressed && bubbles.find(
         (b) => tx >= b.x - bubbleSize / 2 && tx <= b.x + bubbleSize / 2 &&
                ty >= b.y - bubbleSize / 2 && ty <= b.y + bubbleSize / 2
       );
@@ -161,7 +190,7 @@ export default function MonsterScreen() {
         clickCount++;
         hitCounterRef.current++;
 
-        if (monster.id === 11 && !kutsalKilicPurchased) {
+        if (monster.id === 20 && !kutsalKilicPurchased) {
           addFloating(tx, ty, lang === 'tr' ? '⚔️ Kutsal Kılıç Gereklidir.' : '⚔️ Holy Sword Required.', '#B8E0FF');
           continue;
         }
@@ -171,9 +200,11 @@ export default function MonsterScreen() {
         if (kutsalKilicPurchased) {
           kutsalHitCounterRef.current++;
           isKutsalHit = kutsalHitCounterRef.current % 11 === 0;
-          dmg = (isKutsalHit ? 10000 : 1000) * touchMultiplier;
+          const clickDmg = CLICK_POWER_DAMAGE[clickPower - 1] ?? clickPower;
+          const kutsalBase = (clickDmg + 2000) * 1.5;
+          dmg = (isKutsalHit ? kutsalBase * 2 : kutsalBase) * touchMultiplier * weaponDamageMultiplier;
         } else {
-          dmg = (CLICK_POWER_DAMAGE[clickPower - 1] ?? clickPower) * touchMultiplier;
+          dmg = (CLICK_POWER_DAMAGE[clickPower - 1] ?? clickPower) * touchMultiplier * weaponDamageMultiplier;
         }
 
         const newHp = Math.max(0, hpRef.current - dmg);
@@ -182,9 +213,12 @@ export default function MonsterScreen() {
 
         playMonsterSound(monster.id);
         if (isKutsalHit) {
-          addFloating(tx, ty, `⚔️ ${dmg}!`, '#B8E0FF');
-        } else {
-          addFloating(tx, ty, `-${dmg}`, COLORS.PRIMARY);
+          addFloating(tx, ty, `⚔️`, '#B8E0FF');
+        }
+
+        const tikGunBonus = getTikGunPerHit(tikGunLevel);
+        if (tikGunBonus > 0) {
+          addTikTik(tikGunBonus);
         }
 
         if (hitCounterRef.current % HIT_TIKTIK_INTERVAL === 0) {
@@ -216,11 +250,18 @@ export default function MonsterScreen() {
     for (const touch of e.nativeEvent.changedTouches) {
       processedTouchIds.current.delete(touch.identifier);
     }
+    // Cancel long-press if all fingers lifted before 3 seconds
+    if (processedTouchIds.current.size === 0 && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
   };
 
   const handleMonsterDefeated = () => {
+    const wasLocked = !unlockedMonsters.includes(20);
     recordMonsterDefeated(monster.rewardTikTik, monster.rewardXp, monster.id);
-    if (monster.id === 10) {
+    const justUnlocked = wasLocked && useGameStore.getState().unlockedMonsters.includes(20);
+    if (justUnlocked) {
       setShowKutsalKilic(true);
       setTimeout(() => setShowKutsalKilic(false), 3500);
     } else {
@@ -342,8 +383,8 @@ export default function MonsterScreen() {
           </Animated.View>
         </Animated.View>
 
-        {/* Bubbles */}
-        {bubbles.map((b) => (
+        {/* Bubbles — hidden when Slime Kılıcı suppression is active */}
+        {!bubblesSuppressed && bubbles.map((b) => (
           <View
             key={b.id}
             style={[
@@ -369,6 +410,15 @@ export default function MonsterScreen() {
         ))}
       </ImageBackground>
 
+      {/* Slime Kılıcı suppression indicator */}
+      {bubblesSuppressed && (
+        <View style={styles.suppressBar}>
+          <Text style={styles.suppressText}>
+            🫧 {lang === 'tr' ? 'Baloncuklar engellendi — 10s' : 'Bubbles suppressed — 10s'}
+          </Text>
+        </View>
+      )}
+
       {/* Hint bar */}
       <View style={styles.hintBar}>
         <Text style={styles.hintText} numberOfLines={1}>
@@ -388,19 +438,33 @@ export default function MonsterScreen() {
 
       {/* Click Power indicator */}
       <View style={styles.powerRow}>
-        {kutsalKilicPurchased ? (
-          <>
-            <Text style={styles.powerLabel}>⚔️ </Text>
-            <Text style={[styles.powerValue, { color: '#B8E0FF' }]}>{1000 * touchMultiplier}</Text>
-            <Text style={styles.powerLabel}> / </Text>
-            <Text style={[styles.powerValue, { color: COLORS.GOLD }]}>{10000 * touchMultiplier}</Text>
-            {touchMultiplier > 1 && <Text style={styles.powerLabel}> ({touchMultiplier}x)</Text>}
-          </>
-        ) : (
+        {kutsalKilicPurchased ? (() => {
+          const clickDmg = CLICK_POWER_DAMAGE[clickPower - 1] ?? clickPower;
+          const kutsalBase = Math.round((clickDmg + 2000) * 1.5 * touchMultiplier * weaponDamageMultiplier);
+          const kutsalCrit = Math.round((clickDmg + 2000) * 3 * touchMultiplier * weaponDamageMultiplier);
+          return (
+            <>
+              <Text style={styles.powerLabel}>⚔️ </Text>
+              <Text style={[styles.powerValue, { color: '#B8E0FF' }]}>{kutsalBase.toLocaleString()}</Text>
+              <Text style={styles.powerLabel}> / </Text>
+              <Text style={[styles.powerValue, { color: COLORS.GOLD }]}>{kutsalCrit.toLocaleString()}</Text>
+              <Text style={styles.powerLabel}>{lang === 'tr' ? ' (11. vuruş)' : ' (11th hit)'}</Text>
+            </>
+          );
+        })() : (
           <>
             <Text style={styles.powerLabel}>⚡ {t(lang, 'shop_click_power')}: </Text>
             <Text style={styles.powerValue}>{(CLICK_POWER_DAMAGE[clickPower - 1] ?? clickPower) * touchMultiplier}</Text>
             {touchMultiplier > 1 && <Text style={styles.powerLabel}> ({touchMultiplier}x)</Text>}
+          </>
+        )}
+        {weaponDamageMultiplier > 1 && (
+          <>
+            <Text style={styles.powerLabel}>{'  '}</Text>
+            <Text style={styles.powerLabel}>⚔️ </Text>
+            <Text style={[styles.powerValue, { color: '#E17055' }]}>
+              +{Math.round((weaponDamageMultiplier - 1) * 100)}%
+            </Text>
           </>
         )}
       </View>
@@ -411,7 +475,7 @@ export default function MonsterScreen() {
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>{t(lang, 'monster_select')}</Text>
             <ScrollView>
-              {MONSTERS.filter((m) => m.id !== 11 || unlockedMonsters.includes(11)).map((m) => {
+              {MONSTERS.filter((m) => m.id !== 20 || unlockedMonsters.includes(20)).map((m) => {
                 const unlocked = unlockedMonsters.includes(m.id);
                 const active = m.id === activeMonsterId;
                 return (
@@ -465,7 +529,7 @@ export default function MonsterScreen() {
             {lang === 'tr' ? 'KUTSAL KILIÇ AÇILDI!' : 'HOLY SWORD UNLOCKED!'}
           </Text>
           <Text style={styles.kutsalSub}>
-            {lang === 'tr' ? 'Baş Melek yenildi!' : 'Archangel defeated!'}
+            {lang === 'tr' ? 'Melek yenildi!' : 'Angel defeated!'}
           </Text>
           <Text style={styles.kutsalTikTik}>+1.500.000 TT</Text>
         </View>
@@ -578,6 +642,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bubbleEmoji: {},
+  suppressBar: {
+    marginHorizontal: SPACING.MD,
+    marginBottom: 2,
+    backgroundColor: 'rgba(46,213,115,0.15)',
+    borderRadius: RADIUS.MD,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#2ED57366',
+    alignItems: 'center',
+  },
+  suppressText: { fontSize: 12, color: '#2ED573', fontWeight: '800' },
   hintBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',

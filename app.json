@@ -2,7 +2,7 @@
   "expo": {
     "name": "TıkTık",
     "slug": "tiktik",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -26,6 +26,11 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "plugins": []
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "a31f7ad8-bd56-4f31-b1eb-6aae3cce7033"
+      }
+    }
   }
 }

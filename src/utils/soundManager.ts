@@ -14,6 +14,19 @@ const soundFiles: Record<number, number> = {
   11: require('../../assets/sounds/monster_11.wav'),
 };
 
+// Monsters without dedicated sound files are aliased to the closest thematic match
+const soundAliases: Record<number, number> = {
+  12: 9,  // Trol        → İblis Kral (ağır yaratık)
+  13: 5,  // Elemental   → Cadı (büyülü/elektrikli)
+  14: 8,  // Mini Ejderha → İblis (ateş/ejderha)
+  15: 2,  // Kurtadam   → Kurt
+  16: 3,  // Minotor    → Golem (ağır taş darbesi)
+  17: 4,  // Canlı Ağaç → Yaratık Avcısı
+  18: 9,  // Ogre       → İblis Kral (dev yaratık)
+  19: 8,  // Ejderha    → İblis (ateş/ejderha)
+  20: 10, // Baş Melek  → Melek
+};
+
 const cache: Record<number, Audio.Sound> = {};
 
 export async function preloadSounds(): Promise<void> {
@@ -27,7 +40,8 @@ export async function preloadSounds(): Promise<void> {
 }
 
 export function playMonsterSound(monsterId: number): void {
-  const sound = cache[monsterId];
+  const resolvedId = soundAliases[monsterId] ?? monsterId;
+  const sound = cache[resolvedId];
   if (!sound) return;
   sound.setPositionAsync(0).then(() => sound.playAsync()).catch(() => {});
 }

@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { getMonsterById, getNextLevelXp, LEVEL_XP_THRESHOLDS } from '../constants/monsters';
+import { WEAPONS, getEquipmentSlots, EQUIPMENT_SLOT_UNLOCK_LEVELS } from '../constants/shop';
 import { t } from '../i18n';
 import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 
@@ -19,7 +20,15 @@ export default function ProfileScreen() {
   const maxMultiTouch = useGameStore((s) => s.maxMultiTouch);
   const activeMonsterId = useGameStore((s) => s.activeMonsterId);
   const dailyStreak = useGameStore((s) => s.dailyStreak);
+  const purchasedWeapons = useGameStore((s) => s.purchasedWeapons);
+  const equippedWeapons = useGameStore((s) => s.equippedWeapons);
+  const equipWeapon = useGameStore((s) => s.equipWeapon);
+  const unequipWeapon = useGameStore((s) => s.unequipWeapon);
+
+  const [showEquipModal, setShowEquipModal] = useState(false);
+
   const activeMonster = getMonsterById(activeMonsterId);
+  const slots = getEquipmentSlots(level);
 
   const currentLevelXp = LEVEL_XP_THRESHOLDS[level - 1] ?? 0;
   const nextLevelXp = getNextLevelXp(level);
@@ -36,8 +45,21 @@ export default function ProfileScreen() {
           <Text style={styles.avatarEmoji}>{activeMonster.emoji}</Text>
         </View>
         <Text style={styles.nickname}>{nickname}</Text>
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelBadgeText}>{t(lang, 'profile_level', { level })}</Text>
+
+        {/* Level + Equipment row */}
+        <View style={styles.levelEquipRow}>
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelBadgeText}>{t(lang, 'profile_level', { level })}</Text>
+          </View>
+          <TouchableOpacity style={styles.equipCard} onPress={() => setShowEquipModal(true)} activeOpacity={0.8}>
+            <Text style={styles.equipCardEmoji}>⚔️</Text>
+            <View>
+              <Text style={styles.equipCardTitle}>{lang === 'tr' ? 'Ekipmanlar' : 'Equipment'}</Text>
+              <Text style={styles.equipCardSub}>
+                {equippedWeapons.length}/{slots} {lang === 'tr' ? 'aktif' : 'active'}
+              </Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -111,7 +133,7 @@ export default function ProfileScreen() {
         <StatBox
           emoji="🔓"
           label={lang === 'tr' ? 'Açık Canavar' : 'Unlocked Monsters'}
-          value={`${unlockedMonsters.length} / 10`}
+          value={`${unlockedMonsters.length} / 20`}
           color={COLORS.SECONDARY}
         />
         <StatBox
@@ -127,6 +149,132 @@ export default function ProfileScreen() {
           color={COLORS.PURPLE}
         />
       </View>
+
+      {/* Equipment Modal */}
+      <Modal
+        visible={showEquipModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEquipModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>⚔️ {lang === 'tr' ? 'Ekipmanlar' : 'Equipment'}</Text>
+              <TouchableOpacity onPress={() => setShowEquipModal(false)} style={styles.modalCloseBtn}>
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Slot overview */}
+            <Text style={styles.modalSectionLabel}>
+              {lang === 'tr' ? `Aktif Slotlar  ${equippedWeapons.length}/${slots}` : `Active Slots  ${equippedWeapons.length}/${slots}`}
+            </Text>
+            <View style={styles.slotsRow}>
+              {EQUIPMENT_SLOT_UNLOCK_LEVELS.map((reqLevel, i) => {
+                const unlocked = level >= reqLevel;
+                const equippedId = equippedWeapons[i];
+                const weapon = equippedId ? WEAPONS.find((w) => w.id === equippedId) : null;
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.slot,
+                      !unlocked ? styles.slotLocked : weapon ? styles.slotFilled : styles.slotEmpty,
+                    ]}
+                  >
+                    {!unlocked ? (
+                      <>
+                        <Text style={styles.slotLockEmoji}>🔒</Text>
+                        <Text style={styles.slotLockLevel}>Lv.{reqLevel}</Text>
+                      </>
+                    ) : weapon ? (
+                      <>
+                        <Text style={styles.slotWeaponEmoji}>{weapon.emoji}</Text>
+                        <Text style={styles.slotWeaponName} numberOfLines={2}>
+                          {t(lang, weapon.nameKey as any)}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.slotRemoveBtn}
+                          onPress={() => unequipWeapon(weapon.id)}
+                        >
+                          <Text style={styles.slotRemoveBtnText}>
+                            {lang === 'tr' ? 'Çıkar' : 'Remove'}
+                          </Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <Text style={styles.slotPlus}>+</Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Inventory */}
+            <Text style={styles.modalSectionLabel}>
+              {lang === 'tr' ? 'Envanter' : 'Inventory'}
+            </Text>
+            {purchasedWeapons.length === 0 ? (
+              <View style={styles.emptyInventory}>
+                <Text style={styles.emptyInventoryText}>
+                  {lang === 'tr'
+                    ? 'Henüz silah yok.\nMağaza → Seçilmişler → Silah Tüccarı'
+                    : 'No weapons yet.\nShop → Chosen → Weapon Merchant'}
+                </Text>
+              </View>
+            ) : (
+              purchasedWeapons.map((wId) => {
+                const weapon = WEAPONS.find((w) => w.id === wId);
+                if (!weapon) return null;
+                const isEquipped = equippedWeapons.includes(wId);
+                const canEquip = !isEquipped && equippedWeapons.length < slots;
+                const noSlots = !isEquipped && slots === 0;
+                return (
+                  <View key={wId} style={[styles.inventoryRow, isEquipped && styles.inventoryRowEquipped]}>
+                    <Text style={styles.inventoryEmoji}>{weapon.emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inventoryName}>{t(lang, weapon.nameKey as any)}</Text>
+                      <Text style={styles.inventoryBonus}>
+                        {t(lang, weapon.descKey as any)}
+                      </Text>
+                      {isEquipped && (
+                        <Text style={styles.equippedTag}>
+                          {lang === 'tr' ? '✓ Kuşanıldı' : '✓ Equipped'}
+                        </Text>
+                      )}
+                      {noSlots && (
+                        <Text style={styles.noSlotTag}>
+                          {lang === 'tr' ? '⚠ Lv.5 gerekir' : '⚠ Requires Lv.5'}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.equipToggleBtn,
+                        isEquipped ? styles.unequipBtnStyle
+                          : canEquip ? styles.equipBtnActive
+                          : styles.equipBtnLocked,
+                      ]}
+                      onPress={() => (isEquipped ? unequipWeapon(wId) : equipWeapon(wId))}
+                      disabled={!isEquipped && !canEquip}
+                    >
+                      <Text style={styles.equipToggleBtnText}>
+                        {isEquipped
+                          ? (lang === 'tr' ? 'Çıkar' : 'Remove')
+                          : canEquip
+                          ? (lang === 'tr' ? 'Kuşan' : 'Equip')
+                          : (lang === 'tr' ? 'Dolu' : 'Full')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -159,6 +307,7 @@ const statStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.BG_DARK },
   content: { padding: SPACING.MD, paddingBottom: SPACING.XL },
+
   profileCard: {
     backgroundColor: COLORS.BG_CARD,
     borderRadius: RADIUS.XL,
@@ -180,14 +329,36 @@ const styles = StyleSheet.create({
   },
   avatarEmoji: { fontSize: 52 },
   nickname: { ...FONTS.HEADING, fontSize: 28 },
+
+  levelEquipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.SM,
+    marginTop: SPACING.SM,
+  },
   levelBadge: {
     backgroundColor: COLORS.PRIMARY,
     borderRadius: RADIUS.FULL,
     paddingHorizontal: SPACING.MD,
     paddingVertical: 4,
-    marginTop: SPACING.SM,
   },
   levelBadgeText: { color: COLORS.TEXT, fontWeight: '800', fontSize: 14 },
+
+  equipCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.BG_ELEVATED,
+    borderRadius: RADIUS.FULL,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#E1705566',
+  },
+  equipCardEmoji: { fontSize: 16 },
+  equipCardTitle: { fontSize: 13, fontWeight: '800', color: '#E17055' },
+  equipCardSub: { fontSize: 10, color: COLORS.TEXT_MUTED, fontWeight: '600' },
+
   card: {
     backgroundColor: COLORS.BG_CARD,
     borderRadius: RADIUS.LG,
@@ -238,4 +409,129 @@ const styles = StyleSheet.create({
   tikTikValue: { fontSize: 24, fontWeight: '900', color: COLORS.GOLD },
   sectionTitle: { ...FONTS.SUBHEADING, marginBottom: SPACING.SM },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+
+  // ── Equipment Modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: COLORS.BG_CARD,
+    borderTopLeftRadius: RADIUS.XL,
+    borderTopRightRadius: RADIUS.XL,
+    padding: SPACING.LG,
+    borderTopWidth: 2,
+    borderColor: '#E1705544',
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.MD,
+  },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: '#E17055' },
+  modalCloseBtn: { padding: SPACING.SM },
+  modalCloseText: { color: COLORS.TEXT_SECONDARY, fontSize: 18, fontWeight: '700' },
+  modalSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.TEXT_MUTED,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: SPACING.SM,
+    marginTop: SPACING.XS,
+  },
+
+  // Slots
+  slotsRow: {
+    flexDirection: 'row',
+    gap: SPACING.SM,
+    marginBottom: SPACING.LG,
+  },
+  slot: {
+    flex: 1,
+    minHeight: 100,
+    borderRadius: RADIUS.MD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.SM,
+    borderWidth: 1.5,
+    gap: 4,
+  },
+  slotEmpty: {
+    borderColor: COLORS.BORDER,
+    borderStyle: 'dashed',
+    backgroundColor: COLORS.BG_ELEVATED,
+  },
+  slotFilled: {
+    borderColor: '#E17055',
+    backgroundColor: 'rgba(225,112,85,0.08)',
+  },
+  slotLocked: {
+    borderColor: COLORS.BORDER,
+    backgroundColor: COLORS.BG_ELEVATED,
+    opacity: 0.45,
+  },
+  slotPlus: { fontSize: 28, color: COLORS.TEXT_MUTED, fontWeight: '300' },
+  slotLockEmoji: { fontSize: 22 },
+  slotLockLevel: { fontSize: 11, color: COLORS.TEXT_MUTED, fontWeight: '700' },
+  slotWeaponEmoji: { fontSize: 28 },
+  slotWeaponName: { fontSize: 10, color: COLORS.TEXT, fontWeight: '700', textAlign: 'center' },
+  slotRemoveBtn: {
+    backgroundColor: 'rgba(225,112,85,0.3)',
+    borderRadius: RADIUS.SM,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 2,
+  },
+  slotRemoveBtnText: { fontSize: 10, color: '#E17055', fontWeight: '800' },
+
+  // Inventory
+  inventoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.BG_ELEVATED,
+    borderRadius: RADIUS.MD,
+    padding: SPACING.MD,
+    marginBottom: SPACING.SM,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+    gap: SPACING.MD,
+  },
+  inventoryRowEquipped: {
+    borderColor: '#E17055',
+    backgroundColor: 'rgba(225,112,85,0.06)',
+  },
+  inventoryEmoji: { fontSize: 34 },
+  inventoryName: { fontSize: 14, fontWeight: '800', color: COLORS.TEXT },
+  inventoryBonus: { fontSize: 12, color: '#E17055', fontWeight: '700', marginTop: 2 },
+  equippedTag: { fontSize: 11, color: COLORS.SECONDARY, fontWeight: '700', marginTop: 2 },
+  noSlotTag: { fontSize: 11, color: COLORS.GOLD, fontWeight: '700', marginTop: 2 },
+  equipToggleBtn: {
+    borderRadius: RADIUS.MD,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: SPACING.SM,
+    minWidth: 68,
+    alignItems: 'center',
+  },
+  equipBtnActive: { backgroundColor: '#E17055' },
+  unequipBtnStyle: { backgroundColor: COLORS.BG_CARD, borderWidth: 1, borderColor: '#E17055' },
+  equipBtnLocked: { backgroundColor: COLORS.BG_CARD, borderWidth: 1, borderColor: COLORS.BORDER },
+  equipToggleBtnText: { color: COLORS.TEXT, fontWeight: '800', fontSize: 12 },
+  emptyInventory: {
+    padding: SPACING.LG,
+    alignItems: 'center',
+    backgroundColor: COLORS.BG_ELEVATED,
+    borderRadius: RADIUS.MD,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+  },
+  emptyInventoryText: {
+    fontSize: 13,
+    color: COLORS.TEXT_MUTED,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
 });

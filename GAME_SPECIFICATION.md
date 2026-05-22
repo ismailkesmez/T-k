@@ -50,11 +50,27 @@ Bu sekme oyunun çekirdek döngüsüdür (Core Loop).
     *   İlk etapta ekrana aynı anda en fazla **2 parmakla** tıklanabilir.
     *   Aynı anda basılan parmak sayısı `maxMultiTouch` değerinden büyükse, sistem sadece izin verilen maksimum dokunuşu işleme almalıdır.
 *   **Canavarlar ve Seviye Kilitleri:**
-    *   Toplamda 10 adet canavar bulunacaktır. Canavarlar toplam XP miktarına göre doğrusal/kademeli olarak açılır:
-        *   *Canavar 1:* Seviye 1 (0 XP)
-        *   *Canavar 2:* Seviye 2 (100 XP)
-        *   *Canavar 3:* Seviye 3 (1000 XP)
-        *   *Canavar 4 ve sonrası:* Logaritmik/Doğrusal artış ölçeği (Örn: Seviye x 2000 XP).
+    *   Toplamda 20 adet canavar bulunacaktır. Canavarlar toplam XP miktarına göre doğrusal/kademeli olarak açılır:
+        *   *Canavar 1 — Slime:* Seviye 1 (0 XP)
+        *   *Canavar 2 — Kurt:* Seviye 2 (100 XP)
+        *   *Canavar 3 — Golem:* Seviye 3 (1.000 XP)
+        *   *Canavar 4 — Yaratık Avcısı:* Seviye 4 (8.000 XP)
+        *   *Canavar 5 — Cadı:* Seviye 5 (10.000 XP)
+        *   *Canavar 6 — Vampir:* Seviye 6 (12.000 XP)
+        *   *Canavar 7 — Ölü Kral:* Seviye 7 (14.000 XP)
+        *   *Canavar 8 — İblis:* Seviye 8 (16.000 XP)
+        *   *Canavar 9 — İblis Kral:* Seviye 9 (18.000 XP)
+        *   *Canavar 10 — Melek:* Seviye 10 (20.000 XP)
+        *   *Canavar 11 — Goblin Kral:* Seviye 11 (25.000 XP)
+        *   *Canavar 12 — Trol:* Seviye 12 (30.000 XP)
+        *   *Canavar 13 — Elemental:* Seviye 13 (35.000 XP)
+        *   *Canavar 14 — Mini Ejderha:* Seviye 14 (40.000 XP)
+        *   *Canavar 15 — Kurtadam:* Seviye 15 (45.000 XP)
+        *   *Canavar 16 — Minotor:* Seviye 16 (50.000 XP)
+        *   *Canavar 17 — Canlı Ağaç:* Seviye 17 (55.000 XP)
+        *   *Canavar 18 — Ogre:* Seviye 18 (60.000 XP)
+        *   *Canavar 19 — Ejderha:* Seviye 19 (65.000 XP)
+        *   *Canavar 20 — Baş Melek:* Son Boss (kilitsiz, 999.999.999 XP gerekir)
 *   **Tuzak Mekaniği: Zararlı Baloncuklar (Bubbles)**
     *   Canavarın etrafındaki rastgele koordinatlarda, küçük boyutlarda baloncuklar belirecektir.
     *   **Aynı andaki Baloncuk Sayısı:** Aktif canavarın seviyesine eşittir (Canavar Lvl 1 = 1 baloncuk, Lvl 2 = 2 baloncuk...).

@@ -56,7 +56,7 @@ export default function WelcomeScreen() {
       <View style={styles.logoContainer}>
         <Text style={styles.logoEmoji}>👾</Text>
         <Text style={styles.appName}>TıkTık</Text>
-        <Text style={styles.version}>V0.1</Text>
+        <Text style={styles.version}>V0.2</Text>
         <Text style={styles.subtitle}>{t(lang, 'welcome_subtitle')}</Text>
       </View>
 

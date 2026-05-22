@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLevelFromXp, MONSTERS } from '../constants/monsters';
 import { ACHIEVEMENTS } from '../constants/achievements';
-import { IDLE_SYSTEMS, getClickPowerCost, getMultiTouchCost, MAX_CLICK_POWER, MAX_MULTI_TOUCH, OFFLINE_CAP_SECONDS, XP_STORAGE_UPGRADES, getXpStorageCapacity } from '../constants/shop';
+import { IDLE_SYSTEMS, getClickPowerCost, getMultiTouchCost, MAX_CLICK_POWER, MAX_MULTI_TOUCH, OFFLINE_CAP_SECONDS, XP_STORAGE_UPGRADES, getXpStorageCapacity, TIKGUN_LEVELS, getDovizciRates, DOVIZCI_COST_TIKTIK, DOVIZCI_COST_XP, SILAH_TUCCARI_COST_TIKTIK, SILAH_TUCCARI_COST_XP, WEAPONS, getEquipmentSlots } from '../constants/shop';
 
 export interface AchievementState {
   id: number;
@@ -35,6 +35,15 @@ export interface GameState {
   xpStorageLevel: number;
   dailyStreak: number;
   lastLoginDate: string;
+  melekDefeatedCount: number;
+  tikGunLevel: number;
+  goblinKralDefeatedCount: number;
+  miniEjderhaDefeatedCount: number;
+  slimeDefeatedCount: number;
+  dovizciPurchased: boolean;
+  silahTuccariPurchased: boolean;
+  purchasedWeapons: string[];
+  equippedWeapons: string[];
 
   setNickname: (nickname: string) => void;
   checkDailyStreak: () => void;
@@ -58,6 +67,14 @@ export interface GameState {
   collectIdleXpBuffer: () => void;
   purchaseKutsalKilic: () => boolean;
   purchaseXpStorage: (level: number) => boolean;
+  upgradeTikGun: () => boolean;
+  purchaseDovizci: () => boolean;
+  convertXpToTikTik: (amount: number) => boolean;
+  convertTikTikToXp: (amount: number) => boolean;
+  purchaseSilahTuccari: () => boolean;
+  purchaseWeapon: (weaponId: string) => boolean;
+  equipWeapon: (weaponId: string) => boolean;
+  unequipWeapon: (weaponId: string) => void;
 }
 
 export const DEFAULT_STATE = {
@@ -84,6 +101,15 @@ export const DEFAULT_STATE = {
   xpStorageLevel: 0,
   dailyStreak: 1,
   lastLoginDate: '',
+  melekDefeatedCount: 0,
+  tikGunLevel: 0,
+  goblinKralDefeatedCount: 0,
+  miniEjderhaDefeatedCount: 0,
+  slimeDefeatedCount: 0,
+  dovizciPurchased: false,
+  silahTuccariPurchased: false,
+  purchasedWeapons: [] as string[],
+  equippedWeapons: [] as string[],
 };
 
 function checkAchievements(state: Partial<GameState>): AchievementState[] {
@@ -110,7 +136,7 @@ function checkAchievements(state: Partial<GameState>): AchievementState[] {
 function unlockMonsters(xp: number, current: number[]): number[] {
   const updated = [...current];
   for (const m of MONSTERS) {
-    if (m.id === 11) continue; // sadece Melek yenilince açılır
+    if (m.id === 20) continue; // sadece Melek yenilince açılır
     if (xp >= m.requiredXp && !updated.includes(m.id)) {
       updated.push(m.id);
     }
@@ -183,8 +209,11 @@ export const useGameStore = create<GameState>()((set, get) => ({
   purchaseIdleSystem: (systemId) => {
     const s = get();
     if (s.purchasedIdleSystems.includes(systemId)) return false;
-    const sys = IDLE_SYSTEMS.find((x) => x.id === systemId);
-    if (!sys || s.xp < sys.xpCost) return false;
+    const sysIndex = IDLE_SYSTEMS.findIndex((x) => x.id === systemId);
+    if (sysIndex === -1) return false;
+    const sys = IDLE_SYSTEMS[sysIndex];
+    if (sysIndex > 0 && !s.purchasedIdleSystems.includes(IDLE_SYSTEMS[sysIndex - 1].id)) return false;
+    if (s.xp < sys.xpCost) return false;
     set({ purchasedIdleSystems: [...s.purchasedIdleSystems, systemId], xp: s.xp - sys.xpCost });
     return true;
   },
@@ -201,12 +230,17 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const xp = s.xp + xpReward;
     const level = getLevelFromXp(xp);
     let unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters);
-    // Melek (10) yenilince Baş Melek (11) açılır + Kutsal Kılıç mağazada görünür
-    if (monsterId === 10 && !unlockedMonsters.includes(11)) {
-      unlockedMonsters = [...unlockedMonsters, 11];
+    const melekDefeatedCount = monsterId === 10 ? s.melekDefeatedCount + 1 : s.melekDefeatedCount;
+    const goblinKralDefeatedCount = monsterId === 11 ? s.goblinKralDefeatedCount + 1 : s.goblinKralDefeatedCount;
+    const miniEjderhaDefeatedCount = monsterId === 14 ? s.miniEjderhaDefeatedCount + 1 : s.miniEjderhaDefeatedCount;
+    const slimeDefeatedCount = monsterId === 1 ? s.slimeDefeatedCount + 1 : s.slimeDefeatedCount;
+    // Melek 20 kez yenilince VE seviye 20'de Baş Melek (20) açılır + Kutsal Kılıç mağazada görünür
+    const basMelekUnlocks = monsterId === 10 && melekDefeatedCount >= 20 && level >= 20 && !unlockedMonsters.includes(20);
+    if (basMelekUnlocks) {
+      unlockedMonsters = [...unlockedMonsters, 20];
     }
-    const kutsalKilicUnlocked = monsterId === 10 ? true : s.kutsalKilicUnlocked;
-    const next = { ...s, totalMonstersDefeated, tikTik, totalTikTikEarned, xp, level, unlockedMonsters, kutsalKilicUnlocked };
+    const kutsalKilicUnlocked = basMelekUnlocks ? true : s.kutsalKilicUnlocked;
+    const next = { ...s, totalMonstersDefeated, tikTik, totalTikTikEarned, xp, level, unlockedMonsters, kutsalKilicUnlocked, melekDefeatedCount, goblinKralDefeatedCount, miniEjderhaDefeatedCount, slimeDefeatedCount };
     set({ ...next, unlockedAchievements: checkAchievements(next) });
   },
 
@@ -310,6 +344,96 @@ export const useGameStore = create<GameState>()((set, get) => ({
     });
     return true;
   },
+
+  upgradeTikGun: () => {
+    const s = get();
+    const nextLevel = s.tikGunLevel + 1;
+    if (nextLevel > TIKGUN_LEVELS.length) return false;
+    const upgrade = TIKGUN_LEVELS[nextLevel - 1];
+    if (upgrade.requiresGoblinKral && s.goblinKralDefeatedCount < 5) return false;
+    if (s.tikTik < upgrade.cost) return false;
+    set({ tikGunLevel: nextLevel, tikTik: s.tikTik - upgrade.cost });
+    return true;
+  },
+
+  purchaseDovizci: () => {
+    const s = get();
+    if (s.dovizciPurchased) return false;
+    if (s.tikTik < DOVIZCI_COST_TIKTIK || s.xp < DOVIZCI_COST_XP) return false;
+    set({ dovizciPurchased: true, tikTik: s.tikTik - DOVIZCI_COST_TIKTIK, xp: s.xp - DOVIZCI_COST_XP });
+    return true;
+  },
+
+  convertXpToTikTik: (amount) => {
+    const s = get();
+    if (!s.dovizciPurchased || amount <= 0 || s.xp < amount) return false;
+    const { xpToTikTik } = getDovizciRates(s.level);
+    const gain = amount * xpToTikTik;
+    set({ xp: s.xp - amount, tikTik: s.tikTik + gain, totalTikTikEarned: s.totalTikTikEarned + gain });
+    return true;
+  },
+
+  convertTikTikToXp: (amount) => {
+    const s = get();
+    if (!s.dovizciPurchased || amount <= 0 || s.tikTik < amount) return false;
+    const { tikTikToXp } = getDovizciRates(s.level);
+    if (!tikTikToXp) return false;
+    const gain = Math.floor(amount / tikTikToXp);
+    if (gain <= 0) return false;
+    const xp = s.xp + gain;
+    const level = getLevelFromXp(xp);
+    const unlockedMonsters = unlockMonsters(xp, s.unlockedMonsters);
+    set({ tikTik: s.tikTik - amount, xp, level, unlockedMonsters });
+    return true;
+  },
+
+  purchaseSilahTuccari: () => {
+    const s = get();
+    if (s.silahTuccariPurchased) return false;
+    if (s.tikTik < SILAH_TUCCARI_COST_TIKTIK || s.xp < SILAH_TUCCARI_COST_XP) return false;
+    set({ silahTuccariPurchased: true, tikTik: s.tikTik - SILAH_TUCCARI_COST_TIKTIK, xp: s.xp - SILAH_TUCCARI_COST_XP });
+    return true;
+  },
+
+  purchaseWeapon: (weaponId) => {
+    const s = get();
+    if (s.purchasedWeapons.includes(weaponId)) return false;
+    const weapon = WEAPONS.find((w) => w.id === weaponId);
+    if (!weapon) return false;
+    if (weapon.requiresLevel && s.level < weapon.requiresLevel) return false;
+    if (weapon.requiresMonsterDefeats) {
+      const { monsterId, count } = weapon.requiresMonsterDefeats;
+      const defeated = monsterId === 1  ? s.slimeDefeatedCount
+        : monsterId === 10 ? s.melekDefeatedCount
+        : monsterId === 11 ? s.goblinKralDefeatedCount
+        : monsterId === 14 ? s.miniEjderhaDefeatedCount
+        : 0;
+      if (defeated < count) return false;
+    }
+    if (weapon.xpCost && s.xp < weapon.xpCost) return false;
+    if (s.tikTik < weapon.cost) return false;
+    set({
+      purchasedWeapons: [...s.purchasedWeapons, weaponId],
+      tikTik: s.tikTik - weapon.cost,
+      ...(weapon.xpCost ? { xp: s.xp - weapon.xpCost } : {}),
+      ...(weaponId === 'kutsal_kilic' ? { kutsalKilicPurchased: true } : {}),
+    });
+    return true;
+  },
+
+  equipWeapon: (weaponId) => {
+    const s = get();
+    if (!s.purchasedWeapons.includes(weaponId)) return false;
+    if (s.equippedWeapons.includes(weaponId)) return false;
+    if (s.equippedWeapons.length >= getEquipmentSlots(s.level)) return false;
+    set({ equippedWeapons: [...s.equippedWeapons, weaponId] });
+    return true;
+  },
+
+  unequipWeapon: (weaponId) => {
+    const s = get();
+    set({ equippedWeapons: s.equippedWeapons.filter((id) => id !== weaponId) });
+  },
 }));
 
 // ─── Persistence (manual, no middleware) ──────────────────────────────────────
@@ -320,7 +444,8 @@ const PERSIST_KEYS: (keyof typeof DEFAULT_STATE)[] = [
   'totalClicks', 'totalMonstersDefeated', 'totalTikTikEarned',
   'activeMonsterId', 'unlockedMonsters', 'purchasedIdleSystems',
   'unlockedAchievements', 'offlineProgression', 'language', 'idleXpBuffer', 'kutsalKilicUnlocked', 'kutsalKilicPurchased', 'xpStorageLevel',
-  'dailyStreak', 'lastLoginDate',
+  'dailyStreak', 'lastLoginDate', 'melekDefeatedCount', 'tikGunLevel', 'goblinKralDefeatedCount', 'miniEjderhaDefeatedCount', 'slimeDefeatedCount', 'dovizciPurchased',
+  'silahTuccariPurchased', 'purchasedWeapons', 'equippedWeapons',
 ];
 
 export async function loadPersistedState(): Promise<void> {
