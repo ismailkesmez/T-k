@@ -15,7 +15,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useGameStore } from '../store/gameStore';
 import { getMonsterById, MONSTERS, getNextLevelXp } from '../constants/monsters';
-import { IDLE_SYSTEMS, MULTI_TOUCH_MULTIPLIERS, getXpStorageCapacity, CLICK_POWER_DAMAGE, getTikGunPerHit, WEAPONS, SLIME_SWORD_EVOLUTION_COUNT, SLIME_SWORD_FINAL_COUNT } from '../constants/shop';
+import { IDLE_SYSTEMS, MULTI_TOUCH_MULTIPLIERS, getXpStorageCapacity, CLICK_POWER_DAMAGE, getTikGunPerHit, WEAPONS, SLIME_SWORD_EVOLUTION_COUNT, SLIME_SWORD_FINAL_COUNT, SLIME_SWORD_FUSION_COUNT } from '../constants/shop';
 import { playMonsterSound } from '../utils/soundManager';
 import HPBar from '../components/HPBar';
 import FloatingText, { FloatingItem } from '../components/FloatingText';
@@ -62,33 +62,46 @@ export default function MonsterScreen() {
   const bonusHp = useGameStore((s) => s.bonusHp);
   const incrementSlimeSwordUse = useGameStore((s) => s.incrementSlimeSwordUse);
   const slimeSwordUseCount = useGameStore((s) => s.slimeSwordUseCount);
+  const slimeKilledWithMutlakCount = useGameStore((s) => s.slimeKilledWithMutlakCount);
+  const slimeKralDefeated = useGameStore((s) => s.slimeKralDefeated);
   const playerMaxHp = level * 100 + bonusHp;
 
   const [showKutsalKilic, setShowKutsalKilic] = useState(false);
   const [bubblesSuppressed, setBubblesSuppressed] = useState(false);
   const [crossMode, setCrossMode] = useState(false);
+  const [fusionMode, setFusionMode] = useState(false);
   const [cursed, setCursed] = useState(false);
   const cursedRef = useRef(false);
   const crossModeRef = useRef(false);
+  const fusionModeRef = useRef(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bubbleSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const crossModeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fusionModeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const monster = getMonsterById(activeMonsterId);
-  const bubbleSize = Math.max(20, Math.round(58 - (monster.bubbleCount - 1) * 3));
   const slimeKilicEquipped = equippedWeapons.some((id) => {
     if (id === 'slime_sword') return true;
     const enh = enhancedWeapons.find((e) => e.instanceId === id);
     return enh?.baseWeaponId === 'slime_sword';
   });
-  const slimeSwordStage = slimeSwordUseCount >= SLIME_SWORD_FINAL_COUNT ? 2
+  const slimeSwordStage = (slimeKralDefeated && slimeKilledWithMutlakCount >= SLIME_SWORD_FUSION_COUNT) ? 3
+    : slimeSwordUseCount >= SLIME_SWORD_FINAL_COUNT ? 2
     : slimeSwordUseCount >= SLIME_SWORD_EVOLUTION_COUNT ? 1 : 0;
   const slimeKilicEvolved = slimeKilicEquipped && slimeSwordStage >= 1;
   const slimeMutlakEquipped = slimeKilicEquipped && slimeSwordStage === 2;
+  const slimeFusionEquipped = slimeKilicEquipped && slimeSwordStage === 3;
   const kutsalKilicEquipped = equippedWeapons.includes('kutsal_kilic');
   const gumusKilicEquipped = equippedWeapons.includes('gumus_kilic');
 
   const [hp, setHp] = useState(monster.maxHp);
+  const slimeKralHpRatio = monster.id === 21 ? Math.max(0, hp / monster.maxHp) : 1;
+  const activeBubbleCount = monster.id === 21
+    ? Math.max(2, Math.min(25, Math.round(25 - slimeKralHpRatio * 23)))
+    : monster.bubbleCount;
+  const activeBubbleSize = monster.id === 21
+    ? Math.max(20, Math.round(80 - ((activeBubbleCount - 2) / 23) * 60))
+    : (monster.bubbleSizeOverride ?? Math.max(20, Math.round(58 - (monster.bubbleCount - 1) * 3)));
   const [showMonsterPicker, setShowMonsterPicker] = useState(false);
   const [floatingTexts, setFloatingTexts] = useState<FloatingItem[]>([]);
   const [bubbles, setBubbles] = useState<BubbleData[]>([]);
@@ -99,6 +112,7 @@ export default function MonsterScreen() {
   const playerHpRef = useRef(playerHp);
   playerHpRef.current = playerHp;
   crossModeRef.current = crossMode;
+  fusionModeRef.current = fusionMode;
   const monsterScaleAnim = useRef(new Animated.Value(1)).current;
   const defeatAnim = useRef(new Animated.Value(1)).current;
   const processedTouchIds = useRef(new Set<number | string>());
@@ -115,9 +129,12 @@ export default function MonsterScreen() {
     setCrossMode(false);
     cursedRef.current = false;
     setCursed(false);
+    fusionModeRef.current = false;
+    setFusionMode(false);
     if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
     if (bubbleSuppressTimerRef.current) { clearTimeout(bubbleSuppressTimerRef.current); bubbleSuppressTimerRef.current = null; }
     if (crossModeTimerRef.current) { clearTimeout(crossModeTimerRef.current); crossModeTimerRef.current = null; }
+    if (fusionModeTimerRef.current) { clearTimeout(fusionModeTimerRef.current); fusionModeTimerRef.current = null; }
   }, [activeMonsterId]);
 
   // Cleanup timers on unmount
@@ -126,6 +143,7 @@ export default function MonsterScreen() {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
       if (bubbleSuppressTimerRef.current) clearTimeout(bubbleSuppressTimerRef.current);
       if (crossModeTimerRef.current) clearTimeout(crossModeTimerRef.current);
+      if (fusionModeTimerRef.current) clearTimeout(fusionModeTimerRef.current);
     };
   }, []);
 
@@ -157,20 +175,18 @@ export default function MonsterScreen() {
     spawnBubbles();
     const interval = setInterval(spawnBubbles, 3000 + Math.random() * 2000);
     return () => clearInterval(interval);
-  }, [monster.bubbleCount, playAreaSize]);
+  }, [activeBubbleCount, activeBubbleSize, playAreaSize]);
 
   const spawnBubbles = useCallback(() => {
     if (playAreaSize.width === 0) return;
-    const count = monster.bubbleCount;
-    const sz = Math.max(20, Math.round(58 - (count - 1) * 3));
     setBubbles(
-      Array.from({ length: count }, (_, i) => ({
+      Array.from({ length: activeBubbleCount }, (_, i) => ({
         id: i,
-        x: sz / 2 + Math.random() * (playAreaSize.width - sz * 2),
-        y: sz / 2 + Math.random() * (playAreaSize.height - sz * 2),
+        x: activeBubbleSize / 2 + Math.random() * (playAreaSize.width - activeBubbleSize * 2),
+        y: activeBubbleSize / 2 + Math.random() * (playAreaSize.height - activeBubbleSize * 2),
       }))
     );
-  }, [monster.bubbleCount, playAreaSize]);
+  }, [activeBubbleCount, activeBubbleSize, playAreaSize]);
 
   // Save timestamp when leaving screen
   useFocusEffect(
@@ -218,12 +234,25 @@ export default function MonsterScreen() {
     const changedTouches = Array.from(e.nativeEvent.changedTouches);
 
     // Long-press detection for Slime Kılıcı variants
-    if (slimeKilicEquipped && processedTouchIds.current.size === 0 && !bubblesSuppressed && !crossModeRef.current) {
+    if (slimeKilicEquipped && processedTouchIds.current.size === 0 && !bubblesSuppressed && !crossModeRef.current && !fusionModeRef.current) {
       const holdDuration = slimeSwordStage >= 1 ? 2000 : 3000;
       longPressTimerRef.current = setTimeout(() => {
         longPressTimerRef.current = null;
         incrementSlimeSwordUse();
-        if (slimeMutlakEquipped) {
+        if (slimeFusionEquipped) {
+          // Füzyon: suppress bubbles 10s + 3× damage mode
+          fusionModeRef.current = true;
+          setFusionMode(true);
+          setBubblesSuppressed(true);
+          if (bubbleSuppressTimerRef.current) clearTimeout(bubbleSuppressTimerRef.current);
+          if (fusionModeTimerRef.current) clearTimeout(fusionModeTimerRef.current);
+          const endFusion = () => {
+            fusionModeRef.current = false;
+            setFusionMode(false);
+            setBubblesSuppressed(false);
+          };
+          fusionModeTimerRef.current = setTimeout(endFusion, 10000);
+        } else if (slimeMutlakEquipped) {
           // Mutlak: cross mode — bubbles become ✕ attack targets for 10s
           crossModeRef.current = true;
           setCrossMode(true);
@@ -255,8 +284,8 @@ export default function MonsterScreen() {
 
       // Check bubble hit (skip when Slime Kılıcı suppression is active)
       const hitBubble = !bubblesSuppressed && bubbles.find(
-        (b) => tx >= b.x - bubbleSize / 2 && tx <= b.x + bubbleSize / 2 &&
-               ty >= b.y - bubbleSize / 2 && ty <= b.y + bubbleSize / 2
+        (b) => tx >= b.x - activeBubbleSize / 2 && tx <= b.x + activeBubbleSize / 2 &&
+               ty >= b.y - activeBubbleSize / 2 && ty <= b.y + activeBubbleSize / 2
       );
 
       if (hitBubble) {
@@ -276,6 +305,27 @@ export default function MonsterScreen() {
           setBubbles((prev) => prev.filter((b) => b.id !== hitBubble.id));
           addFloating(tx, ty, `✕ ${crossDmg.toLocaleString()}`, '#A29BFE');
           if (newHp === 0) handleMonsterDefeated();
+        } else if (monster.instakillBubble) {
+          // Slime Kral: bubble instakills player
+          setBubbles((prev) => prev.filter((b) => b.id !== hitBubble.id));
+          addFloating(tx, ty, lang === 'tr' ? '☠️ Anlık Ölüm!' : '☠️ Instant Kill!', '#FF4757');
+          playerHpRef.current = 0;
+          setPlayerHp(0);
+          const xpLostInstakill = onPlayerDeath(monster.id);
+          playerHpRef.current = useGameStore.getState().playerHp;
+          hpRef.current = monster.maxHp;
+          setHp(monster.maxHp);
+          cursedRef.current = false;
+          setCursed(false);
+          crossModeRef.current = false;
+          setCrossMode(false);
+          if (crossModeTimerRef.current) { clearTimeout(crossModeTimerRef.current); crossModeTimerRef.current = null; }
+          addFloating(
+            playAreaSize.width / 2,
+            playAreaSize.height / 3,
+            xpLostInstakill > 0 ? `💀 -${xpLostInstakill} XP` : '💀',
+            COLORS.PRIMARY,
+          );
         } else {
           // Normal bubble: monster heals, player takes damage
           const newHp = Math.min(monster.maxHp, hpRef.current + monster.bubbleHeal);
@@ -306,6 +356,10 @@ export default function MonsterScreen() {
             crossModeRef.current = false;
             setCrossMode(false);
             if (crossModeTimerRef.current) { clearTimeout(crossModeTimerRef.current); crossModeTimerRef.current = null; }
+            fusionModeRef.current = false;
+            setFusionMode(false);
+            setBubblesSuppressed(false);
+            if (fusionModeTimerRef.current) { clearTimeout(fusionModeTimerRef.current); fusionModeTimerRef.current = null; }
             addFloating(
               playAreaSize.width / 2,
               playAreaSize.height / 3,
@@ -340,6 +394,7 @@ export default function MonsterScreen() {
           const baseDmg = CLICK_POWER_DAMAGE[clickPower - 1] ?? clickPower;
           dmg = (baseDmg * touchMultiplier + flatWeaponBonus) * weaponDamageMultiplier;
         }
+        if (fusionModeRef.current) dmg = Math.round(dmg * 3);
 
         const newHp = Math.max(0, hpRef.current - dmg);
         hpRef.current = newHp;
@@ -392,12 +447,22 @@ export default function MonsterScreen() {
   };
 
   const handleMonsterDefeated = () => {
-    const wasLocked = !unlockedMonsters.includes(20);
+    const wasLocked20 = !unlockedMonsters.includes(20);
+    const wasLocked21 = !unlockedMonsters.includes(21);
     recordMonsterDefeated(monster.rewardTikTik, monster.rewardXp, monster.id);
-    const justUnlocked = wasLocked && useGameStore.getState().unlockedMonsters.includes(20);
-    if (justUnlocked) {
+    const newUnlockedMonsters = useGameStore.getState().unlockedMonsters;
+    const justUnlocked20 = wasLocked20 && newUnlockedMonsters.includes(20);
+    const justUnlocked21 = wasLocked21 && newUnlockedMonsters.includes(21);
+    if (justUnlocked20) {
       setShowKutsalKilic(true);
       setTimeout(() => setShowKutsalKilic(false), 3500);
+    } else if (justUnlocked21) {
+      addFloating(
+        playAreaSize.width / 2,
+        playAreaSize.height / 3,
+        lang === 'tr' ? '👑 Slime Kral açıldı!' : '👑 Slime King unlocked!',
+        '#00E56B'
+      );
     } else {
       addFloating(
         playAreaSize.width / 2,
@@ -412,16 +477,34 @@ export default function MonsterScreen() {
       cursedRef.current = false;
       setCursed(false);
     }
-    // Defeat always clears cross mode
+    // Defeat always clears cross mode and fusion mode
     crossModeRef.current = false;
     setCrossMode(false);
     if (crossModeTimerRef.current) { clearTimeout(crossModeTimerRef.current); crossModeTimerRef.current = null; }
+    fusionModeRef.current = false;
+    setFusionMode(false);
+    setBubblesSuppressed(false);
+    if (fusionModeTimerRef.current) { clearTimeout(fusionModeTimerRef.current); fusionModeTimerRef.current = null; }
+
+    // Show Füzyon unlock notification when Slime Kral is defeated
+    if (monster.id === 21) {
+      addFloating(
+        playAreaSize.width / 2,
+        playAreaSize.height / 3 + 50,
+        lang === 'tr' ? '✨ Füzyon kilidi açıldı!' : '✨ Fusion unlocked!',
+        '#00E56B'
+      );
+    }
 
     Animated.sequence([
       Animated.timing(defeatAnim, { toValue: 1.3, duration: 150, useNativeDriver: true }),
       Animated.timing(defeatAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
       Animated.timing(defeatAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
     ]).start(() => {
+      if (monster.id === 21) {
+        setActiveMonster(1);
+        return;
+      }
       hpRef.current = monster.maxHp;
       setHp(monster.maxHp);
       hitCounterRef.current = 0;
@@ -496,9 +579,6 @@ export default function MonsterScreen() {
           <Text style={styles.monsterLevel}>Lvl {monster.level}</Text>
         </View>
         <View style={styles.playerHpWidget}>
-          <Text style={styles.playerHpLabel}>
-            ❤️ {Math.round(playerHp).toLocaleString()} / {playerMaxHp.toLocaleString()}
-          </Text>
           <View style={styles.playerHpTrack}>
             <View
               style={[
@@ -506,6 +586,9 @@ export default function MonsterScreen() {
                 { width: `${Math.max(0, Math.min(1, playerHp / playerMaxHp)) * 100}%` as any },
               ]}
             />
+            <Text style={styles.playerHpText}>
+              ❤️ {Math.round(playerHp).toLocaleString()} / {playerMaxHp.toLocaleString()}
+            </Text>
           </View>
         </View>
       </View>
@@ -549,17 +632,17 @@ export default function MonsterScreen() {
             style={[
               styles.bubble,
               {
-                left: b.x - bubbleSize / 2,
-                top: b.y - bubbleSize / 2,
-                width: bubbleSize,
-                height: bubbleSize,
+                left: b.x - activeBubbleSize / 2,
+                top: b.y - activeBubbleSize / 2,
+                width: activeBubbleSize,
+                height: activeBubbleSize,
               },
             ]}
             pointerEvents="none"
           >
             <Text style={[
               styles.bubbleEmoji,
-              { fontSize: Math.round(bubbleSize * 0.65) },
+              { fontSize: Math.round(activeBubbleSize * 0.65) },
               crossMode && styles.crossBubble,
             ]}>
               {crossMode ? '✕' : monster.bubbleEmoji}
@@ -574,12 +657,20 @@ export default function MonsterScreen() {
       </ImageBackground>
 
       {/* Slime Kılıcı suppression indicator */}
-      {bubblesSuppressed && (
+      {bubblesSuppressed && !fusionMode && (
         <View style={styles.suppressBar}>
           <Text style={styles.suppressText}>
             🫧 {lang === 'tr'
               ? `Baloncuklar engellendi — ${slimeKilicEvolved ? '20s' : '10s'}`
               : `Bubbles suppressed — ${slimeKilicEvolved ? '20s' : '10s'}`}
+          </Text>
+        </View>
+      )}
+
+      {fusionMode && (
+        <View style={styles.fusionModeBar}>
+          <Text style={styles.fusionModeText}>
+            ✨ {lang === 'tr' ? 'Füzyon Mod — 10s • Her vuruş 3× hasar' : 'Fusion Mode — 10s • Each hit deals 3× damage'}
           </Text>
         </View>
       )}
@@ -639,16 +730,45 @@ export default function MonsterScreen() {
             {touchMultiplier > 1 && <Text style={styles.powerLabel}> ({touchMultiplier}x)</Text>}
           </>
         )}
-        {weaponDamageMultiplier > 1 && (
-          <>
-            <Text style={styles.powerLabel}>{'  '}</Text>
-            <Text style={styles.powerLabel}>⚔️ </Text>
-            <Text style={[styles.powerValue, { color: '#E17055' }]}>
-              +{Math.round((weaponDamageMultiplier - 1) * 100)}%
-            </Text>
-          </>
-        )}
       </View>
+
+      {/* Equipped weapon effect chips */}
+      {equippedWeapons.length > 0 && (
+        <View style={styles.weaponEffectsRow}>
+          {equippedWeapons.map((id) => {
+            const baseWeapon = WEAPONS.find((w) => w.id === id);
+            const enhanced = enhancedWeapons.find((e) => e.instanceId === id);
+            const weapon = baseWeapon ?? (enhanced ? WEAPONS.find((w) => w.id === enhanced.baseWeaponId) : null);
+            if (!weapon) return null;
+
+            const isDisabled = gumusKilicEquipped && id !== 'gumus_kilic' && weapon.bonusType !== 'bubble_suppress';
+            let label = '';
+            let chipColor = '#E17055';
+
+            if (weapon.bonusType === 'kutsal_kilic') {
+              label = '+2000 • ×1.5';
+              chipColor = '#B8E0FF';
+            } else if (weapon.bonusType === 'damage_percent') {
+              const pct = Math.round(weapon.bonusValue * 100);
+              label = enhanced ? `+${enhanced.enhancement.toLocaleString()} • +${pct}%` : `+${pct}%`;
+            } else if (weapon.bonusType === 'bubble_suppress') {
+              const holdTime = slimeSwordStage >= 1 ? '2s' : '3s';
+              const effect = slimeSwordStage === 3 ? '✨10s' : slimeSwordStage === 2 ? '✕10s' : slimeSwordStage === 1 ? '20s' : '10s';
+              label = `${holdTime}→${effect}`;
+              chipColor = '#2ED573';
+            }
+
+            return (
+              <View key={id} style={[styles.weaponChip, isDisabled && styles.weaponChipDisabled]}>
+                <Text style={styles.weaponChipEmoji}>{weapon.emoji}</Text>
+                <Text style={[styles.weaponChipLabel, { color: isDisabled ? COLORS.TEXT_MUTED : chipColor }]}>
+                  {label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {/* Monster Picker Modal */}
       <Modal visible={showMonsterPicker} transparent animationType="slide" onRequestClose={() => setShowMonsterPicker(false)}>
@@ -656,7 +776,7 @@ export default function MonsterScreen() {
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>{t(lang, 'monster_select')}</Text>
             <ScrollView>
-              {MONSTERS.filter((m) => m.id !== 20 || unlockedMonsters.includes(20)).map((m) => {
+              {MONSTERS.filter((m) => (m.id !== 20 || unlockedMonsters.includes(20)) && (m.id !== 21 || unlockedMonsters.includes(21))).map((m) => {
                 const unlocked = unlockedMonsters.includes(m.id);
                 const active = m.id === activeMonsterId;
                 return (
@@ -761,27 +881,34 @@ const styles = StyleSheet.create({
   monsterLevel: { fontSize: 13, color: COLORS.TEXT_SECONDARY, fontWeight: '600' },
   playerHpWidget: {
     alignItems: 'flex-end',
-    gap: 3,
-  },
-  playerHpLabel: {
-    fontSize: 11,
-    color: '#FF7675',
-    fontWeight: '700',
   },
   playerHpTrack: {
-    width: 88,
-    height: 6,
+    width: 110,
+    height: 18,
     backgroundColor: COLORS.BG_ELEVATED,
     borderRadius: RADIUS.FULL,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.BORDER,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   playerHpFill: {
-    height: '100%',
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: '#FF7675',
     borderRadius: RADIUS.FULL,
   },
+  playerHpText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    textShadowColor: 'rgba(0,0,0,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  } as const,
   xpBufferContainer: {
     marginHorizontal: SPACING.MD,
     marginBottom: SPACING.SM,
@@ -876,6 +1003,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   crossModeText: { fontSize: 12, color: '#A29BFE', fontWeight: '800' },
+  fusionModeBar: {
+    marginHorizontal: SPACING.MD,
+    marginBottom: 2,
+    backgroundColor: 'rgba(0,229,107,0.15)',
+    borderRadius: RADIUS.MD,
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#00E56B88',
+    alignItems: 'center',
+  },
+  fusionModeText: { fontSize: 12, color: '#00E56B', fontWeight: '800' } as const,
   crossBubble: { color: '#A29BFE', fontWeight: '900' },
   cursedBar: {
     marginHorizontal: SPACING.MD,
@@ -905,6 +1044,28 @@ const styles = StyleSheet.create({
   },
   powerLabel: { fontSize: 12, color: COLORS.TEXT_MUTED },
   powerValue: { fontSize: 14, color: COLORS.CYAN, fontWeight: '800' },
+  weaponEffectsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: SPACING.MD,
+    paddingBottom: SPACING.XS,
+  },
+  weaponChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.BG_CARD,
+    borderRadius: RADIUS.FULL,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+  },
+  weaponChipDisabled: { opacity: 0.35 },
+  weaponChipEmoji: { fontSize: 13 },
+  weaponChipLabel: { fontSize: 11, fontWeight: '800' },
   // Modal
   modalOverlay: {
     flex: 1,

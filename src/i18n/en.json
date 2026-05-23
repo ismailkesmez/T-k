@@ -182,6 +182,8 @@
   "weapon_slime_sword_evolved_desc": "Hold 2s → suppress bubbles 20s",
   "weapon_slime_sword_final": "Absolute Slime Sword",
   "weapon_slime_sword_final_desc": "Hold 2s → bubbles become ✕ for 10s, each ✕ deals 2× damage",
+  "weapon_slime_sword_fusion": "Fusion Slime Sword",
+  "weapon_slime_sword_fusion_desc": "Hold 2s → suppress bubbles 10s & each hit deals 3× damage",
   "weapon_dragon_sword": "Dragon Sword",
   "weapon_dragon_sword_desc": "+25% bonus damage",
   "weapon_gumus_kilic": "Silver Sword",
@@ -207,6 +209,7 @@
   "monster_name_18": "Ogre",
   "monster_name_19": "Dragon",
   "monster_name_20": "Archangel",
+  "monster_name_21": "Slime King",
 
   "settings_sound": "Sound Effects",
   "settings_sound_on": "On",

@@ -232,7 +232,7 @@ export default function SettingsScreen() {
       {/* Uygulama bilgisi */}
       <View style={styles.appInfo}>
         <Text style={styles.appName}>TıkTık</Text>
-        <Text style={styles.appVersion}>{t(lang, 'settings_version')} V0.4</Text>
+        <Text style={styles.appVersion}>{t(lang, 'settings_version')} V0.5</Text>
         <Text style={styles.appBy}>{t(lang, 'settings_by')} Kesmez</Text>
       </View>
 

@@ -140,6 +140,7 @@ export function getDovizciRates(level: number): DovizciRates {
 
 export const SLIME_SWORD_EVOLUTION_COUNT = 100;
 export const SLIME_SWORD_FINAL_COUNT = 200;
+export const SLIME_SWORD_FUSION_COUNT = 1000;
 
 export const SIFIA_ISLEYEN_UNLOCK_LEVEL = 50;
 export const SIFIA_ISLEYEN_TT_PER_HP = 100;
@@ -154,6 +155,7 @@ export const SILAH_TUCCARI_COST_XP     = 1000;
 export const ISLEYICI_COST_TIKTIK = 1_000_000;
 export const ISLEYICI_TT_PER_POWER = 1_000;   // 1 güç = 1000 TıkTık
 export const ISLEYICI_XP_PER_POWER = 10;       // 1 güç = 10 XP
+export const ISLEYICI_MAX_ENHANCEMENT = 15_000; // slime_sword hariç tüm silahlar için üst sınır
 
 export interface EnhancedWeapon {
   instanceId: string;    // e.g. "golem_gloves_enhanced"

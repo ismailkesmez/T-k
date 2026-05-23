@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLevelFromXp, MONSTERS } from '../constants/monsters';
 import { ACHIEVEMENTS } from '../constants/achievements';
-import { IDLE_SYSTEMS, getClickPowerCost, getMultiTouchCost, MAX_CLICK_POWER, MAX_MULTI_TOUCH, OFFLINE_CAP_SECONDS, XP_STORAGE_UPGRADES, getXpStorageCapacity, TIKGUN_LEVELS, getDovizciRates, DOVIZCI_COST_TIKTIK, DOVIZCI_COST_XP, SILAH_TUCCARI_COST_TIKTIK, SILAH_TUCCARI_COST_XP, WEAPONS, getEquipmentSlots, ISLEYICI_COST_TIKTIK, ISLEYICI_TT_PER_POWER, ISLEYICI_XP_PER_POWER, EnhancedWeapon, SIFIA_ISLEYEN_TT_PER_HP, SIFIA_ISLEYEN_XP_PER_HP } from '../constants/shop';
+import { IDLE_SYSTEMS, getClickPowerCost, getMultiTouchCost, MAX_CLICK_POWER, MAX_MULTI_TOUCH, OFFLINE_CAP_SECONDS, XP_STORAGE_UPGRADES, getXpStorageCapacity, TIKGUN_LEVELS, getDovizciRates, DOVIZCI_COST_TIKTIK, DOVIZCI_COST_XP, SILAH_TUCCARI_COST_TIKTIK, SILAH_TUCCARI_COST_XP, WEAPONS, getEquipmentSlots, ISLEYICI_COST_TIKTIK, ISLEYICI_TT_PER_POWER, ISLEYICI_XP_PER_POWER, ISLEYICI_MAX_ENHANCEMENT, EnhancedWeapon, SIFIA_ISLEYEN_TT_PER_HP, SIFIA_ISLEYEN_XP_PER_HP, SLIME_SWORD_FINAL_COUNT } from '../constants/shop';
 
 export interface AchievementState {
   id: number;
@@ -53,8 +53,12 @@ export interface GameState {
   playerHp: number;
   bonusHp: number;
   slimeSwordUseCount: number;
+  slimeKilledWithMutlakCount: number;
+  slimeKralDefeated: boolean;
+  gender: 'male' | 'female' | null;
 
   setNickname: (nickname: string) => void;
+  setGender: (gender: 'male' | 'female') => void;
   setPlayerHp: (hp: number) => void;
   checkDailyStreak: () => void;
   addXp: (amount: number) => void;
@@ -135,6 +139,9 @@ export const DEFAULT_STATE = {
   playerHp: 100,
   bonusHp: 0,
   slimeSwordUseCount: 0,
+  slimeKilledWithMutlakCount: 0,
+  slimeKralDefeated: false,
+  gender: null as 'male' | 'female' | null,
 };
 
 function checkAchievements(state: Partial<GameState>): AchievementState[] {
@@ -161,7 +168,7 @@ function checkAchievements(state: Partial<GameState>): AchievementState[] {
 function unlockMonsters(xp: number, current: number[], defeated: number[]): number[] {
   const updated = [...current];
   for (const m of MONSTERS) {
-    if (m.id === 20) continue; // sadece Melek yenilince açılır
+    if (m.id === 20 || m.id === 21) continue; // sadece özel koşullarla açılır
     if (xp >= m.requiredXp && !updated.includes(m.id) && (m.id === 1 || defeated.includes(m.id - 1))) {
       updated.push(m.id);
     }
@@ -173,6 +180,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
   ...DEFAULT_STATE,
 
   setNickname: (nickname) => set({ nickname: nickname.trim() }),
+  setGender: (gender) => set({ gender }),
 
   setPlayerHp: (hp) => set({ playerHp: hp }),
 
@@ -291,13 +299,25 @@ export const useGameStore = create<GameState>()((set, get) => ({
     const slimeDefeatedCount = monsterId === 1 ? s.slimeDefeatedCount + 1 : s.slimeDefeatedCount;
     const ogreDefeatedCount = monsterId === 18 ? s.ogreDefeatedCount + 1 : s.ogreDefeatedCount;
     const kurtDefeatedCount = monsterId === 2 ? s.kurtDefeatedCount + 1 : s.kurtDefeatedCount;
+    // Slime 100 kez Mutlak Slime Kılıcı ile öldürülünce Slime Kral (21) açılır
+    const slimeKilledWithMutlakCount = (monsterId === 1 && s.slimeSwordUseCount >= SLIME_SWORD_FINAL_COUNT)
+      ? s.slimeKilledWithMutlakCount + 1
+      : s.slimeKilledWithMutlakCount;
+    if (slimeKilledWithMutlakCount >= 100 && !unlockedMonsters.includes(21)) {
+      unlockedMonsters = [...unlockedMonsters, 21];
+    }
+    // Slime Kral (21) yenilince listeden kalkar ve slimeKralDefeated = true olur
+    const slimeKralDefeated = monsterId === 21 ? true : s.slimeKralDefeated;
+    if (monsterId === 21) {
+      unlockedMonsters = unlockedMonsters.filter((id) => id !== 21);
+    }
     // Melek 20 kez yenilince VE seviye 20'de Baş Melek (20) açılır + Kutsal Kılıç mağazada görünür
     const basMelekUnlocks = monsterId === 10 && melekDefeatedCount >= 20 && level >= 20 && !unlockedMonsters.includes(20);
     if (basMelekUnlocks) {
       unlockedMonsters = [...unlockedMonsters, 20];
     }
     const kutsalKilicUnlocked = basMelekUnlocks ? true : s.kutsalKilicUnlocked;
-    const next = { ...s, totalMonstersDefeated, tikTik, totalTikTikEarned, xp, level, unlockedMonsters, defeatedMonsters, kutsalKilicUnlocked, melekDefeatedCount, goblinKralDefeatedCount, miniEjderhaDefeatedCount, slimeDefeatedCount, ogreDefeatedCount, kurtDefeatedCount };
+    const next = { ...s, totalMonstersDefeated, tikTik, totalTikTikEarned, xp, level, unlockedMonsters, defeatedMonsters, kutsalKilicUnlocked, melekDefeatedCount, goblinKralDefeatedCount, miniEjderhaDefeatedCount, slimeDefeatedCount, ogreDefeatedCount, kurtDefeatedCount, slimeKilledWithMutlakCount, slimeKralDefeated };
     set({ ...next, unlockedAchievements: checkAchievements(next) });
   },
 
@@ -465,6 +485,8 @@ export const useGameStore = create<GameState>()((set, get) => ({
   purchaseWeapon: (weaponId) => {
     const s = get();
     if (s.purchasedWeapons.includes(weaponId)) return false;
+    if (weaponId === 'kutsal_kilic' && s.kutsalKilicPurchased) return false;
+    if (weaponId === 'slime_sword' && s.enhancedWeapons.some((e) => e.baseWeaponId === 'slime_sword')) return false;
     const weapon = WEAPONS.find((w) => w.id === weaponId);
     if (!weapon) return false;
     if (weapon.requiresLevel && s.level < weapon.requiresLevel) return false;
@@ -521,13 +543,26 @@ export const useGameStore = create<GameState>()((set, get) => ({
   enhanceWeapon: (sourceId, power) => {
     const s = get();
     if (!s.isleyiciPurchased || power <= 0) return false;
-    const ttCost = power * ISLEYICI_TT_PER_POWER;
-    const xpCost = power * ISLEYICI_XP_PER_POWER;
-    if (s.tikTik < ttCost || s.xp < xpCost) return false;
 
     const isBase = s.purchasedWeapons.includes(sourceId);
     const existingEnhanced = s.enhancedWeapons.find((e) => e.instanceId === sourceId);
     if (!isBase && !existingEnhanced) return false;
+
+    const baseWeaponId = isBase ? sourceId : existingEnhanced!.baseWeaponId;
+    const isSlimeSword = baseWeaponId === 'slime_sword';
+
+    // Slime kılıcı hariç tüm silahlar için işlenebilir güç üst sınırı
+    let effectivePower = power;
+    if (!isSlimeSword) {
+      const current = isBase ? 0 : existingEnhanced!.enhancement;
+      const remaining = Math.max(0, ISLEYICI_MAX_ENHANCEMENT - current);
+      if (remaining <= 0) return false;
+      effectivePower = Math.min(power, remaining);
+    }
+
+    const ttCost = effectivePower * ISLEYICI_TT_PER_POWER;
+    const xpCost = effectivePower * ISLEYICI_XP_PER_POWER;
+    if (s.tikTik < ttCost || s.xp < xpCost) return false;
 
     let purchasedWeapons = s.purchasedWeapons;
     let enhancedWeapons: EnhancedWeapon[];
@@ -535,7 +570,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
     if (isBase) {
       // Base silahtan yeni benzersiz instance oluştur
       const instanceId = `${sourceId}_enhanced_${Date.now()}`;
-      const newEnhanced: EnhancedWeapon = { instanceId, baseWeaponId: sourceId, enhancement: power };
+      const newEnhanced: EnhancedWeapon = { instanceId, baseWeaponId: sourceId, enhancement: effectivePower };
       purchasedWeapons = s.purchasedWeapons.filter((id) => id !== sourceId);
       enhancedWeapons = [...s.enhancedWeapons, newEnhanced];
       const equippedWeapons = s.equippedWeapons;
@@ -543,12 +578,11 @@ export const useGameStore = create<GameState>()((set, get) => ({
       return true;
     } else {
       // Mevcut enhanced silahı güncelle — aynı instanceId korunur
-      const updated: EnhancedWeapon = { ...existingEnhanced!, enhancement: existingEnhanced!.enhancement + power };
+      const updated: EnhancedWeapon = { ...existingEnhanced!, enhancement: existingEnhanced!.enhancement + effectivePower };
       enhancedWeapons = s.enhancedWeapons.map((e) => e.instanceId === sourceId ? updated : e);
       set({ tikTik: s.tikTik - ttCost, xp: s.xp - xpCost, enhancedWeapons });
       return true;
     }
-
   },
 }));
 
@@ -562,7 +596,7 @@ const PERSIST_KEYS: (keyof typeof DEFAULT_STATE)[] = [
   'unlockedAchievements', 'offlineProgression', 'language', 'idleXpBuffer', 'kutsalKilicUnlocked', 'kutsalKilicPurchased', 'xpStorageLevel',
   'dailyStreak', 'lastLoginDate', 'melekDefeatedCount', 'tikGunLevel', 'goblinKralDefeatedCount', 'miniEjderhaDefeatedCount', 'slimeDefeatedCount', 'ogreDefeatedCount', 'kurtDefeatedCount', 'dovizciPurchased',
   'silahTuccariPurchased', 'purchasedWeapons', 'equippedWeapons', 'defeatedMonsters', 'soundEnabled',
-  'isleyiciPurchased', 'enhancedWeapons', 'playerHp', 'bonusHp', 'slimeSwordUseCount',
+  'isleyiciPurchased', 'enhancedWeapons', 'playerHp', 'bonusHp', 'slimeSwordUseCount', 'slimeKilledWithMutlakCount', 'slimeKralDefeated', 'gender',
 ];
 
 export async function loadPersistedState(): Promise<void> {
@@ -582,6 +616,15 @@ export async function loadPersistedState(): Promise<void> {
       }
       if (saved.slimeSwordUseCount == null) {
         saved.slimeSwordUseCount = 0;
+      }
+      if (saved.slimeKilledWithMutlakCount == null) {
+        saved.slimeKilledWithMutlakCount = 0;
+      }
+      if (saved.slimeKralDefeated == null) {
+        saved.slimeKralDefeated = false;
+      }
+      if (saved.gender == null) {
+        saved.gender = null;
       }
       useGameStore.setState(saved);
     }

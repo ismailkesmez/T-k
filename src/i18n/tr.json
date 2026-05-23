@@ -182,6 +182,8 @@
   "weapon_slime_sword_evolved_desc": "2s basılı tut → 20s balon engelle",
   "weapon_slime_sword_final": "Mutlak Slime Kılıcı",
   "weapon_slime_sword_final_desc": "2s basılı tut → balonlar 10s ✕'e dönüşür, her ✕ 2× hasar verir",
+  "weapon_slime_sword_fusion": "Füzyon Slime Kılıcı",
+  "weapon_slime_sword_fusion_desc": "2s basılı tut → 10s balon engelle & her dokunuş 3× hasar",
   "weapon_dragon_sword": "Ejder Kılıcı",
   "weapon_dragon_sword_desc": "+%25 ek hasar",
   "weapon_gumus_kilic": "Gümüş Kılıç",
@@ -207,6 +209,7 @@
   "monster_name_18": "Ogre",
   "monster_name_19": "Ejderha",
   "monster_name_20": "Baş Melek",
+  "monster_name_21": "Slime Kral",
 
   "settings_sound": "Ses Efektleri",
   "settings_sound_on": "Açık",

@@ -34,6 +34,7 @@ import {
   ISLEYICI_COST_TIKTIK,
   ISLEYICI_TT_PER_POWER,
   ISLEYICI_XP_PER_POWER,
+  ISLEYICI_MAX_ENHANCEMENT,
   SIFIA_ISLEYEN_UNLOCK_LEVEL,
   SIFIA_ISLEYEN_TT_PER_HP,
   SIFIA_ISLEYEN_XP_PER_HP,
@@ -569,7 +570,8 @@ export default function ShopScreen() {
                     </View>
                     {WEAPONS.map((weapon) => {
                       const owned = purchasedWeapons.includes(weapon.id) ||
-                        (weapon.id === 'kutsal_kilic' && kutsalKilicPurchased);
+                        (weapon.id === 'kutsal_kilic' && (kutsalKilicPurchased || enhancedWeapons.some((e) => e.baseWeaponId === 'kutsal_kilic'))) ||
+                        (weapon.id === 'slime_sword' && enhancedWeapons.some((e) => e.baseWeaponId === 'slime_sword'));
                       const levelOk = !weapon.requiresLevel || level >= weapon.requiresLevel;
                       const getDefeatedCount = (mid: number) =>
                         mid === 1  ? slimeDefeatedCount
@@ -703,26 +705,46 @@ export default function ShopScreen() {
                         const baseId = enh ? enh.baseWeaponId : wId;
                         const weapon = WEAPONS.find((w) => w.id === baseId);
                         if (!weapon) return null;
+                        const isSlimeSword = baseId === 'slime_sword';
+                        const currentEnh = enh ? enh.enhancement : 0;
+                        const isAtCap = !isSlimeSword && currentEnh >= ISLEYICI_MAX_ENHANCEMENT;
                         const displayName = `${t(lang, weapon.nameKey as any)}${enh ? ` +${enh.enhancement}` : ''}`;
                         const isSelected = selectedWeaponId === wId;
                         return (
                           <TouchableOpacity
                             key={wId}
-                            style={[styles.isleyiciWeaponRow, isSelected && styles.isleyiciWeaponRowSelected]}
-                            onPress={() => setSelectedWeaponId(isSelected ? null : wId)}
+                            style={[styles.isleyiciWeaponRow, isSelected && styles.isleyiciWeaponRowSelected, isAtCap && styles.isleyiciWeaponRowCapped]}
+                            onPress={() => !isAtCap && setSelectedWeaponId(isSelected ? null : wId)}
+                            activeOpacity={isAtCap ? 1 : 0.7}
                           >
                             <Text style={styles.weaponEmoji}>{weapon.emoji}</Text>
-                            <Text style={[styles.weaponName, isSelected && { color: '#00CEC9' }]}>{displayName}</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.weaponName, isSelected && { color: '#00CEC9' }, isAtCap && { color: COLORS.TEXT_MUTED }]}>{displayName}</Text>
+                              {!isSlimeSword && (
+                                <Text style={{ fontSize: 11, color: isAtCap ? '#E17055' : COLORS.TEXT_MUTED }}>
+                                  {isAtCap
+                                    ? (lang === 'tr' ? `Maksimum işleme: ${ISLEYICI_MAX_ENHANCEMENT.toLocaleString()}` : `Max enhancement: ${ISLEYICI_MAX_ENHANCEMENT.toLocaleString()}`)
+                                    : (lang === 'tr' ? `${currentEnh.toLocaleString()} / ${ISLEYICI_MAX_ENHANCEMENT.toLocaleString()}` : `${currentEnh.toLocaleString()} / ${ISLEYICI_MAX_ENHANCEMENT.toLocaleString()}`)}
+                                </Text>
+                              )}
+                            </View>
                             {isSelected && <Text style={{ color: '#00CEC9', fontWeight: '900' }}>✓</Text>}
                           </TouchableOpacity>
                         );
                       })
                     )}
 
-                    {selectedWeaponId && (
+                    {selectedWeaponId && (() => {
+                      const selEnh = enhancedWeapons.find((e) => e.instanceId === selectedWeaponId);
+                      const selBaseId = selEnh ? selEnh.baseWeaponId : selectedWeaponId;
+                      const selIsSlime = selBaseId === 'slime_sword';
+                      const selCurrent = selEnh ? selEnh.enhancement : 0;
+                      const selRemaining = selIsSlime ? null : Math.max(0, ISLEYICI_MAX_ENHANCEMENT - selCurrent);
+                      return (
                       <>
                         <Text style={[styles.dovizciSectionLabel, { marginTop: SPACING.MD }]}>
                           {lang === 'tr' ? 'Eklenecek Güç' : 'Power to Add'}
+                          {selRemaining !== null ? ` (max ${selRemaining.toLocaleString()})` : ''}
                         </Text>
                         <View style={styles.dovizciRow}>
                           <TextInput
@@ -746,7 +768,8 @@ export default function ShopScreen() {
                           </TouchableOpacity>
                         </View>
                       </>
-                    )}
+                      );
+                    })()}
 
                     <View style={styles.dovizciBalanceRow}>
                       <Text style={styles.dovizciBalanceText}>💰 {tikTik.toLocaleString()} TT</Text>
@@ -1258,6 +1281,10 @@ const styles = StyleSheet.create({
   isleyiciWeaponRowSelected: {
     borderColor: '#00CEC9',
     backgroundColor: '#00CEC911',
+  },
+  isleyiciWeaponRowCapped: {
+    opacity: 0.5,
+    borderColor: '#E1705544',
   },
 
   // ── Şifa İşleyen ──

@@ -8,20 +8,32 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useGameStore } from '../store/gameStore';
 import { t } from '../i18n';
 import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 
+const CHARACTER_IMAGES = {
+  male: require('../../assets/characters/character_male.png'),
+  female: require('../../assets/characters/character_female.png'),
+};
+
 export default function WelcomeScreen() {
   const [nickname, setNickname] = useState('');
+  const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(null);
   const [error, setError] = useState('');
   const setNicknameFn = useGameStore((s) => s.setNickname);
+  const setGenderFn = useGameStore((s) => s.setGender);
   const lang = useGameStore((s) => s.language);
   const shake = React.useRef(new Animated.Value(0)).current;
 
   const handleStart = () => {
+    if (!selectedGender) {
+      setError(lang === 'tr' ? 'Lütfen bir karakter seçin.' : 'Please select a character.');
+      return;
+    }
     const trimmed = nickname.trim();
     if (!trimmed) {
       triggerShake();
@@ -33,6 +45,7 @@ export default function WelcomeScreen() {
       setError(t(lang, 'welcome_error_short'));
       return;
     }
+    setGenderFn(selectedGender);
     setNicknameFn(trimmed);
   };
 
@@ -56,8 +69,28 @@ export default function WelcomeScreen() {
       <View style={styles.logoContainer}>
         <Text style={styles.logoEmoji}>👾</Text>
         <Text style={styles.appName}>TıkTık</Text>
-        <Text style={styles.version}>V0.4</Text>
+        <Text style={styles.version}>V0.5</Text>
         <Text style={styles.subtitle}>{t(lang, 'welcome_subtitle')}</Text>
+      </View>
+
+      {/* Gender Picker */}
+      <View style={styles.genderRow}>
+        {(['male', 'female'] as const).map((g) => {
+          const selected = selectedGender === g;
+          return (
+            <TouchableOpacity
+              key={g}
+              style={[styles.genderCard, selected && styles.genderCardSelected]}
+              onPress={() => { setSelectedGender(g); setError(''); }}
+              activeOpacity={0.8}
+            >
+              <Image source={CHARACTER_IMAGES[g]} style={styles.genderImage} resizeMode="contain" />
+              <Text style={[styles.genderLabel, selected && styles.genderLabelSelected]}>
+                {g === 'male' ? (lang === 'tr' ? 'Erkek' : 'Male') : (lang === 'tr' ? 'Kadın' : 'Female')}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <View style={styles.formContainer}>
@@ -106,7 +139,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: SPACING.XL * 1.5,
+    marginBottom: SPACING.XL,
   },
   logoEmoji: {
     fontSize: 80,
@@ -134,6 +167,38 @@ const styles = StyleSheet.create({
     marginTop: SPACING.SM,
     textAlign: 'center',
     color: COLORS.TEXT_SECONDARY,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: SPACING.MD,
+    marginBottom: SPACING.XL,
+  },
+  genderCard: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: COLORS.BG_CARD,
+    borderRadius: RADIUS.LG,
+    paddingTop: SPACING.SM,
+    paddingBottom: SPACING.MD,
+    borderWidth: 2,
+    borderColor: COLORS.BORDER,
+  },
+  genderCardSelected: {
+    borderColor: COLORS.PRIMARY,
+    backgroundColor: 'rgba(255,71,87,0.08)',
+  },
+  genderImage: {
+    width: 120,
+    height: 155,
+  },
+  genderLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.TEXT_SECONDARY,
+    marginTop: SPACING.SM,
+  },
+  genderLabelSelected: {
+    color: COLORS.PRIMARY,
   },
   formContainer: {
     width: '100%',

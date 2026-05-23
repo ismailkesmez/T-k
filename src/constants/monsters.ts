@@ -22,6 +22,8 @@ export interface Monster {
   color: string;
   bgColor: string;
   playBg: string;
+  instakillBubble?: boolean;
+  bubbleSizeOverride?: number;
 }
 
 export const MONSTERS: Monster[] = [
@@ -49,6 +51,33 @@ export const MONSTERS: Monster[] = [
     color: '#2ED573',
     bgColor: 'rgba(46,213,115,0.12)',
     playBg: '#0a1f12',
+  },
+  {
+    id: 21,
+    name: 'Slime Kral',
+    nameKey: 'monster_name_21',
+    emoji: '👑',
+    image: require('../../assets/monsters/monster_1_1.png'),
+    bgImage: require('../../assets/monsters/bg_1_1.png'),
+    imagePosition: 'center',
+    imageOffsetY: 0,
+    imageScale: 1.2,
+    level: 1,
+    requiredXp: 999999999,
+    maxHp: 150000000,
+    rewardTikTik: 20000000,
+    rewardXp: 0,
+    hitRewardTikTik: 500,
+    hitRewardXp: 0,
+    bubbleEmoji: '👑',
+    bubbleHeal: 0,
+    bubbleCount: 2,
+    hpRegenPerSec: 50000,
+    color: '#00E56B',
+    bgColor: 'rgba(0,229,107,0.15)',
+    playBg: '#031208',
+    instakillBubble: true,
+    bubbleSizeOverride: 80,
   },
   {
     id: 2,

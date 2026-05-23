@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Image } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { getMonsterById, getNextLevelXp, LEVEL_XP_THRESHOLDS } from '../constants/monsters';
-import { WEAPONS, getEquipmentSlots, EQUIPMENT_SLOT_UNLOCK_LEVELS, EnhancedWeapon } from '../constants/shop';
+import { WEAPONS, getEquipmentSlots, EQUIPMENT_SLOT_UNLOCK_LEVELS, EnhancedWeapon, SLIME_SWORD_EVOLUTION_COUNT, SLIME_SWORD_FINAL_COUNT, SLIME_SWORD_FUSION_COUNT } from '../constants/shop';
+
+const CHARACTER_IMAGES = {
+  male: require('../../assets/characters/character_male.png'),
+  female: require('../../assets/characters/character_female.png'),
+};
 import { t } from '../i18n';
 import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 
@@ -26,6 +31,9 @@ export default function ProfileScreen() {
   const equipWeapon = useGameStore((s) => s.equipWeapon);
   const unequipWeapon = useGameStore((s) => s.unequipWeapon);
   const slimeSwordUseCount = useGameStore((s) => s.slimeSwordUseCount);
+  const slimeKralDefeated = useGameStore((s) => s.slimeKralDefeated);
+  const slimeKilledWithMutlakCount = useGameStore((s) => s.slimeKilledWithMutlakCount);
+  const gender = useGameStore((s) => s.gender);
 
   const [showEquipModal, setShowEquipModal] = useState(false);
 
@@ -43,9 +51,15 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Profile card */}
       <View style={styles.profileCard}>
-        <View style={[styles.avatarCircle, { borderColor: activeMonster.color }]}>
-          <Text style={styles.avatarEmoji}>{activeMonster.emoji}</Text>
-        </View>
+        {gender ? (
+          <View style={[styles.avatarPortrait, { borderColor: gender === 'male' ? '#6C5CE7' : '#FD79A8' }]}>
+            <Image source={CHARACTER_IMAGES[gender]} style={styles.avatarPortraitImage} resizeMode="cover" />
+          </View>
+        ) : (
+          <View style={[styles.avatarCircle, { borderColor: activeMonster.color }]}>
+            <Text style={styles.avatarEmoji}>{activeMonster.emoji}</Text>
+          </View>
+        )}
         <Text style={styles.nickname}>{nickname}</Text>
 
         {/* Level + Equipment row */}
@@ -244,19 +258,26 @@ export default function ProfileScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.inventoryName}>
                           {wId === 'slime_sword'
-                            ? t(lang, (slimeSwordUseCount >= 200 ? 'weapon_slime_sword_final' : slimeSwordUseCount >= 100 ? 'weapon_slime_sword_evolved' : 'weapon_slime_sword') as any)
+                            ? t(lang, ((slimeKralDefeated && slimeKilledWithMutlakCount >= SLIME_SWORD_FUSION_COUNT) ? 'weapon_slime_sword_fusion' : slimeSwordUseCount >= SLIME_SWORD_FINAL_COUNT ? 'weapon_slime_sword_final' : slimeSwordUseCount >= SLIME_SWORD_EVOLUTION_COUNT ? 'weapon_slime_sword_evolved' : 'weapon_slime_sword') as any)
                             : t(lang, weapon.nameKey as any)}
                         </Text>
                         <Text style={styles.inventoryBonus}>
                           {wId === 'slime_sword'
-                            ? t(lang, (slimeSwordUseCount >= 200 ? 'weapon_slime_sword_final_desc' : slimeSwordUseCount >= 100 ? 'weapon_slime_sword_evolved_desc' : 'weapon_slime_sword_desc') as any)
+                            ? t(lang, ((slimeKralDefeated && slimeKilledWithMutlakCount >= SLIME_SWORD_FUSION_COUNT) ? 'weapon_slime_sword_fusion_desc' : slimeSwordUseCount >= SLIME_SWORD_FINAL_COUNT ? 'weapon_slime_sword_final_desc' : slimeSwordUseCount >= SLIME_SWORD_EVOLUTION_COUNT ? 'weapon_slime_sword_evolved_desc' : 'weapon_slime_sword_desc') as any)
                             : t(lang, weapon.descKey as any)}
                         </Text>
-                        {wId === 'slime_sword' && slimeSwordUseCount < 200 && (
+                        {wId === 'slime_sword' && slimeSwordUseCount < SLIME_SWORD_FINAL_COUNT && (
                           <Text style={styles.inventoryBonus}>
                             {lang === 'tr'
-                              ? `${slimeSwordUseCount}/${slimeSwordUseCount >= 100 ? 200 : 100} kullanım`
-                              : `${slimeSwordUseCount}/${slimeSwordUseCount >= 100 ? 200 : 100} uses`}
+                              ? `${slimeSwordUseCount}/${slimeSwordUseCount >= SLIME_SWORD_EVOLUTION_COUNT ? SLIME_SWORD_FINAL_COUNT : SLIME_SWORD_EVOLUTION_COUNT} kullanım`
+                              : `${slimeSwordUseCount}/${slimeSwordUseCount >= SLIME_SWORD_EVOLUTION_COUNT ? SLIME_SWORD_FINAL_COUNT : SLIME_SWORD_EVOLUTION_COUNT} uses`}
+                          </Text>
+                        )}
+                        {wId === 'slime_sword' && slimeSwordUseCount >= SLIME_SWORD_FINAL_COUNT && !(slimeKralDefeated && slimeKilledWithMutlakCount >= SLIME_SWORD_FUSION_COUNT) && (
+                          <Text style={styles.inventoryBonus}>
+                            {slimeKralDefeated
+                              ? (lang === 'tr' ? `${slimeKilledWithMutlakCount}/${SLIME_SWORD_FUSION_COUNT} Slime öldürme` : `${slimeKilledWithMutlakCount}/${SLIME_SWORD_FUSION_COUNT} Slime kills`)
+                              : (lang === 'tr' ? '✨ Slime Kral\'ı yen — füzyon kilidi açılır' : '✨ Defeat Slime King — fusion unlock')}
                           </Text>
                         )}
                         {isEquipped && <Text style={styles.equippedTag}>{lang === 'tr' ? '✓ Kuşanıldı' : '✓ Equipped'}</Text>}
@@ -281,9 +302,13 @@ export default function ProfileScreen() {
                   const canEquip = !isEquipped && equippedWeapons.length < slots;
                   const noSlots = !isEquipped && slots === 0;
                   const isSlimeSword = weapon.id === 'slime_sword';
-                  const slimeStage = isSlimeSword ? (slimeSwordUseCount >= 200 ? 2 : slimeSwordUseCount >= 100 ? 1 : 0) : 0;
-                  const slimeNameKey = slimeStage === 2 ? 'weapon_slime_sword_final' : slimeStage === 1 ? 'weapon_slime_sword_evolved' : 'weapon_slime_sword';
-                  const slimeDescKey = slimeStage === 2 ? 'weapon_slime_sword_final_desc' : slimeStage === 1 ? 'weapon_slime_sword_evolved_desc' : 'weapon_slime_sword_desc';
+                  const slimeStage = isSlimeSword
+                    ? ((slimeKralDefeated && slimeKilledWithMutlakCount >= SLIME_SWORD_FUSION_COUNT) ? 3
+                      : slimeSwordUseCount >= SLIME_SWORD_FINAL_COUNT ? 2
+                      : slimeSwordUseCount >= SLIME_SWORD_EVOLUTION_COUNT ? 1 : 0)
+                    : 0;
+                  const slimeNameKey = slimeStage === 3 ? 'weapon_slime_sword_fusion' : slimeStage === 2 ? 'weapon_slime_sword_final' : slimeStage === 1 ? 'weapon_slime_sword_evolved' : 'weapon_slime_sword';
+                  const slimeDescKey = slimeStage === 3 ? 'weapon_slime_sword_fusion_desc' : slimeStage === 2 ? 'weapon_slime_sword_final_desc' : slimeStage === 1 ? 'weapon_slime_sword_evolved_desc' : 'weapon_slime_sword_desc';
                   const baseName = isSlimeSword ? t(lang, slimeNameKey as any) : t(lang, weapon.nameKey as any);
                   const displayName = `${baseName} +${enh.enhancement}`;
                   return (
@@ -296,11 +321,18 @@ export default function ProfileScreen() {
                             ? t(lang, slimeDescKey as any)
                             : t(lang, weapon.descKey as any)}
                         </Text>
-                        {isSlimeSword && slimeSwordUseCount < 200 && (
+                        {isSlimeSword && slimeSwordUseCount < SLIME_SWORD_FINAL_COUNT && (
                           <Text style={styles.inventoryBonus}>
                             {lang === 'tr'
-                              ? `${slimeSwordUseCount}/${slimeSwordUseCount >= 100 ? 200 : 100} kullanım`
-                              : `${slimeSwordUseCount}/${slimeSwordUseCount >= 100 ? 200 : 100} uses`}
+                              ? `${slimeSwordUseCount}/${slimeSwordUseCount >= SLIME_SWORD_EVOLUTION_COUNT ? SLIME_SWORD_FINAL_COUNT : SLIME_SWORD_EVOLUTION_COUNT} kullanım`
+                              : `${slimeSwordUseCount}/${slimeSwordUseCount >= SLIME_SWORD_EVOLUTION_COUNT ? SLIME_SWORD_FINAL_COUNT : SLIME_SWORD_EVOLUTION_COUNT} uses`}
+                          </Text>
+                        )}
+                        {isSlimeSword && slimeSwordUseCount >= SLIME_SWORD_FINAL_COUNT && slimeStage < 3 && (
+                          <Text style={styles.inventoryBonus}>
+                            {slimeKralDefeated
+                              ? (lang === 'tr' ? `${slimeKilledWithMutlakCount}/${SLIME_SWORD_FUSION_COUNT} Slime öldürme` : `${slimeKilledWithMutlakCount}/${SLIME_SWORD_FUSION_COUNT} Slime kills`)
+                              : (lang === 'tr' ? '✨ Slime Kral\'ı yen — füzyon kilidi açılır' : '✨ Defeat Slime King — fusion unlock')}
                           </Text>
                         )}
                         {isEquipped && <Text style={styles.equippedTag}>{lang === 'tr' ? '✓ Kuşanıldı' : '✓ Equipped'}</Text>}
@@ -365,6 +397,18 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.MD,
     borderWidth: 1,
     borderColor: COLORS.BORDER,
+  },
+  avatarPortrait: {
+    width: 100,
+    height: 130,
+    borderRadius: RADIUS.LG,
+    borderWidth: 3,
+    overflow: 'hidden',
+    marginBottom: SPACING.MD,
+  },
+  avatarPortraitImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarCircle: {
     width: 96,
