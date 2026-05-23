@@ -31,6 +31,12 @@ import {
   SILAH_TUCCARI_COST_TIKTIK,
   SILAH_TUCCARI_COST_XP,
   WEAPONS,
+  ISLEYICI_COST_TIKTIK,
+  ISLEYICI_TT_PER_POWER,
+  ISLEYICI_XP_PER_POWER,
+  SIFIA_ISLEYEN_UNLOCK_LEVEL,
+  SIFIA_ISLEYEN_TT_PER_HP,
+  SIFIA_ISLEYEN_XP_PER_HP,
 } from '../constants/shop';
 import { t } from '../i18n';
 import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
@@ -54,10 +60,16 @@ export default function ShopScreen() {
   const goblinKralDefeatedCount = useGameStore((s) => s.goblinKralDefeatedCount);
   const dovizciPurchased = useGameStore((s) => s.dovizciPurchased);
   const silahTuccariPurchased = useGameStore((s) => s.silahTuccariPurchased);
+  const isleyiciPurchased = useGameStore((s) => s.isleyiciPurchased);
+  const bonusHp = useGameStore((s) => s.bonusHp);
+  const addBonusHp = useGameStore((s) => s.addBonusHp);
   const purchasedWeapons = useGameStore((s) => s.purchasedWeapons);
+  const enhancedWeapons = useGameStore((s) => s.enhancedWeapons);
   const miniEjderhaDefeatedCount = useGameStore((s) => s.miniEjderhaDefeatedCount);
   const slimeDefeatedCount = useGameStore((s) => s.slimeDefeatedCount);
   const melekDefeatedCount = useGameStore((s) => s.melekDefeatedCount);
+  const ogreDefeatedCount = useGameStore((s) => s.ogreDefeatedCount);
+  const kurtDefeatedCount = useGameStore((s) => s.kurtDefeatedCount);
 
   const upgradeClickPower = useGameStore((s) => s.upgradeClickPower);
   const upgradeMultiTouch = useGameStore((s) => s.upgradeMultiTouch);
@@ -70,11 +82,18 @@ export default function ShopScreen() {
   const convertTikTikToXp = useGameStore((s) => s.convertTikTikToXp);
   const purchaseSilahTuccari = useGameStore((s) => s.purchaseSilahTuccari);
   const purchaseWeapon = useGameStore((s) => s.purchaseWeapon);
+  const purchaseIsleyici = useGameStore((s) => s.purchaseIsleyici);
+  const enhanceWeapon = useGameStore((s) => s.enhanceWeapon);
 
   const [xpConvertInput, setXpConvertInput] = useState('');
   const [ttConvertInput, setTtConvertInput] = useState('');
   const [showDovizciModal, setShowDovizciModal] = useState(false);
   const [showSilahModal, setShowSilahModal] = useState(false);
+  const [showIsleyiciModal, setShowIsleyiciModal] = useState(false);
+  const [showSifaIsleyenModal, setShowSifaIsleyenModal] = useState(false);
+  const [sifaHpInput, setSifaHpInput] = useState('');
+  const [selectedWeaponId, setSelectedWeaponId] = useState<string | null>(null);
+  const [enhancePowerInput, setEnhancePowerInput] = useState('');
 
   const clickPowerCost = getClickPowerCost(clickPower);
   const multiTouchCost = getMultiTouchCost(maxMultiTouch);
@@ -127,6 +146,31 @@ export default function ShopScreen() {
     if (!ok) Alert.alert('', t(lang, 'shop_not_enough_tiktik'));
   };
 
+  const handleBuyIsleyici = () => {
+    const ok = purchaseIsleyici();
+    if (!ok) Alert.alert('', lang === 'tr'
+      ? `Gereksinim: ${ISLEYICI_COST_TIKTIK.toLocaleString()} TıkTık`
+      : `Requirement: ${ISLEYICI_COST_TIKTIK.toLocaleString()} TıkTık`);
+  };
+
+  const handleEnhanceWeapon = () => {
+    const power = parseInt(enhancePowerInput, 10);
+    if (!selectedWeaponId || isNaN(power) || power <= 0) {
+      Alert.alert('', lang === 'tr' ? 'Geçerli bir değer girin' : 'Enter a valid amount');
+      return;
+    }
+    const ok = enhanceWeapon(selectedWeaponId, power);
+    if (ok) {
+      Alert.alert('✓', lang === 'tr' ? `Silah +${power} güç kazandı!` : `Weapon gained +${power} power!`);
+      setEnhancePowerInput('');
+      setSelectedWeaponId(null);
+    } else {
+      Alert.alert('', lang === 'tr'
+        ? `Gereksinim: ${(power * ISLEYICI_TT_PER_POWER).toLocaleString()} TT + ${power * ISLEYICI_XP_PER_POWER} XP`
+        : `Requirement: ${(power * ISLEYICI_TT_PER_POWER).toLocaleString()} TT + ${power * ISLEYICI_XP_PER_POWER} XP`);
+    }
+  };
+
   const handleBuyDovizci = () => {
     const ok = purchaseDovizci();
     if (!ok) Alert.alert('', lang === 'tr'
@@ -163,6 +207,23 @@ export default function ShopScreen() {
       setTtConvertInput('');
     } else {
       Alert.alert('', lang === 'tr' ? 'Yetersiz TıkTık' : 'Not enough TıkTık');
+    }
+  };
+
+  const handleAddBonusHp = () => {
+    const amount = parseInt(sifaHpInput, 10);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert('', lang === 'tr' ? 'Geçerli bir miktar girin' : 'Enter a valid amount');
+      return;
+    }
+    const ok = addBonusHp(amount);
+    if (ok) {
+      Alert.alert('❤️', lang === 'tr' ? `+${amount} kalıcı can eklendi!` : `+${amount} permanent HP added!`);
+      setSifaHpInput('');
+    } else {
+      Alert.alert('', lang === 'tr'
+        ? `Gereksinim: ${(amount * SIFIA_ISLEYEN_TT_PER_HP).toLocaleString()} TT + ${amount * SIFIA_ISLEYEN_XP_PER_HP} XP`
+        : `Requirement: ${(amount * SIFIA_ISLEYEN_TT_PER_HP).toLocaleString()} TT + ${amount * SIFIA_ISLEYEN_XP_PER_HP} XP`);
     }
   };
 
@@ -305,12 +366,23 @@ export default function ShopScreen() {
             </Text>
             {XP_STORAGE_UPGRADES.map((upgrade) => {
               const owned = xpStorageLevel >= upgrade.level;
-              const unlocked = xpStorageLevel >= upgrade.level - 1;
+              const prevOwned = xpStorageLevel >= upgrade.level - 1;
+              const levelOk = !upgrade.requiresLevel || level >= upgrade.requiresLevel;
+              const ogreOk = !upgrade.requiresOgreDefeats || ogreDefeatedCount >= upgrade.requiresOgreDefeats;
+              const extraReqsMet = levelOk && ogreOk;
+              const unlocked = prevOwned && extraReqsMet;
               const canAffordIt = xp >= upgrade.xpCost;
+              const lockReason = !prevOwned
+                ? (lang === 'tr' ? 'Öncekini al' : 'Buy previous first')
+                : !levelOk
+                ? (lang === 'tr' ? `Seviye ${upgrade.requiresLevel} gerekli` : `Requires Level ${upgrade.requiresLevel}`)
+                : !ogreOk
+                ? (lang === 'tr' ? `👿 Ogre (${ogreDefeatedCount}/${upgrade.requiresOgreDefeats})` : `👿 Ogre (${ogreDefeatedCount}/${upgrade.requiresOgreDefeats})`)
+                : '';
               return (
                 <View
                   key={upgrade.level}
-                  style={[styles.storageCard, owned && styles.storageCardOwned, !unlocked && styles.storageCardLocked]}
+                  style={[styles.storageCard, owned && styles.storageCardOwned, !unlocked && !owned && styles.storageCardLocked]}
                 >
                   <Text style={styles.storageEmoji}>{owned ? '✅' : unlocked ? '📦' : '🔒'}</Text>
                   <View style={styles.storageInfo}>
@@ -321,9 +393,19 @@ export default function ShopScreen() {
                       {owned
                         ? (lang === 'tr' ? 'Sahip' : 'Owned')
                         : !unlocked
-                        ? (lang === 'tr' ? 'Öncekini al' : 'Buy previous first')
+                        ? lockReason
                         : `${upgrade.xpCost.toLocaleString()} XP`}
                     </Text>
+                    {!owned && upgrade.requiresLevel && (
+                      <Text style={[styles.storageCost, { color: levelOk ? COLORS.SECONDARY : COLORS.GOLD }]}>
+                        {levelOk ? '✓' : ''} {lang === 'tr' ? `Seviye ${upgrade.requiresLevel}` : `Level ${upgrade.requiresLevel}`}
+                        {upgrade.requiresOgreDefeats
+                          ? (lang === 'tr'
+                            ? `  •  👿 Ogre ${ogreDefeatedCount}/${upgrade.requiresOgreDefeats}`
+                            : `  •  👿 Ogre ${ogreDefeatedCount}/${upgrade.requiresOgreDefeats}`)
+                          : ''}
+                      </Text>
+                    )}
                   </View>
                   <TouchableOpacity
                     style={[
@@ -491,6 +573,7 @@ export default function ShopScreen() {
                       const levelOk = !weapon.requiresLevel || level >= weapon.requiresLevel;
                       const getDefeatedCount = (mid: number) =>
                         mid === 1  ? slimeDefeatedCount
+                        : mid === 2  ? kurtDefeatedCount
                         : mid === 10 ? melekDefeatedCount
                         : mid === 14 ? miniEjderhaDefeatedCount
                         : 0;
@@ -546,6 +629,225 @@ export default function ShopScreen() {
                     </View>
                   </View>
                 </View>
+              </Modal>
+
+              {/* ── İşleyici Kart ── */}
+              <TouchableOpacity
+                style={styles.isleyiciCard}
+                onPress={() => isleyiciPurchased && setShowIsleyiciModal(true)}
+                activeOpacity={isleyiciPurchased ? 0.7 : 1}
+              >
+                <View style={styles.dovizciHeader}>
+                  <Text style={styles.isleyiciEmoji}>⚗️</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.isleyiciName}>{lang === 'tr' ? 'İşleyici' : 'Enhancer'}</Text>
+                    <Text style={styles.dovizciDesc}>
+                      {lang === 'tr' ? 'Silahlarına TıkTık ile güç ekle' : 'Add power to your weapons with TıkTık'}
+                    </Text>
+                  </View>
+                  {!isleyiciPurchased ? (
+                    <TouchableOpacity
+                      style={[styles.dovizciBtn, tikTik >= ISLEYICI_COST_TIKTIK ? styles.isleyiciBtnActive : styles.dovizciBtnDisabled]}
+                      onPress={handleBuyIsleyici}
+                    >
+                      <Text style={styles.isleyiciBtnText}>{lang === 'tr' ? 'Satın Al' : 'Buy'}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.dovizciBtnOwned}>
+                      <Text style={[styles.dovizciBtnOwnedText, { color: '#00CEC9' }]}>{'›'}</Text>
+                    </View>
+                  )}
+                </View>
+                {!isleyiciPurchased && (
+                  <Text style={[styles.dovizciCost, { color: '#00CEC9' }]}>
+                    {`${ISLEYICI_COST_TIKTIK.toLocaleString()} TıkTık`}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              {/* ── İşleyici Modal ── */}
+              <Modal
+                visible={showIsleyiciModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowIsleyiciModal(false)}
+              >
+                <KeyboardAvoidingView
+                  style={styles.dovizciModalOverlay}
+                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                  <View style={[styles.dovizciModalSheet, { borderColor: '#00CEC944' }]}>
+                    <View style={styles.dovizciModalHeader}>
+                      <Text style={[styles.dovizciModalTitle, { color: '#00CEC9' }]}>⚗️ {lang === 'tr' ? 'İşleyici' : 'Enhancer'}</Text>
+                      <TouchableOpacity onPress={() => setShowIsleyiciModal(false)} style={styles.dovizciModalCloseBtn}>
+                        <Text style={styles.dovizciModalCloseText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={styles.dovizciSectionLabel}>
+                      {lang === 'tr' ? 'Silah Seç' : 'Select Weapon'}
+                    </Text>
+                    <Text style={[styles.dovizciDesc, { marginBottom: SPACING.SM }]}>
+                      {lang === 'tr'
+                        ? `1.000 TıkTık + 10 XP = +1 Güç`
+                        : `1,000 TıkTık + 10 XP = +1 Power`}
+                    </Text>
+
+                    {[...purchasedWeapons, ...enhancedWeapons.map((e) => e.instanceId)].length === 0 ? (
+                      <Text style={[styles.dovizciDesc, { textAlign: 'center', marginVertical: SPACING.MD }]}>
+                        {lang === 'tr' ? 'Envanterinde silah yok.' : 'No weapons in inventory.'}
+                      </Text>
+                    ) : (
+                      [...purchasedWeapons, ...enhancedWeapons.map((e) => e.instanceId)].map((wId) => {
+                        const enh = enhancedWeapons.find((e) => e.instanceId === wId);
+                        const baseId = enh ? enh.baseWeaponId : wId;
+                        const weapon = WEAPONS.find((w) => w.id === baseId);
+                        if (!weapon) return null;
+                        const displayName = `${t(lang, weapon.nameKey as any)}${enh ? ` +${enh.enhancement}` : ''}`;
+                        const isSelected = selectedWeaponId === wId;
+                        return (
+                          <TouchableOpacity
+                            key={wId}
+                            style={[styles.isleyiciWeaponRow, isSelected && styles.isleyiciWeaponRowSelected]}
+                            onPress={() => setSelectedWeaponId(isSelected ? null : wId)}
+                          >
+                            <Text style={styles.weaponEmoji}>{weapon.emoji}</Text>
+                            <Text style={[styles.weaponName, isSelected && { color: '#00CEC9' }]}>{displayName}</Text>
+                            {isSelected && <Text style={{ color: '#00CEC9', fontWeight: '900' }}>✓</Text>}
+                          </TouchableOpacity>
+                        );
+                      })
+                    )}
+
+                    {selectedWeaponId && (
+                      <>
+                        <Text style={[styles.dovizciSectionLabel, { marginTop: SPACING.MD }]}>
+                          {lang === 'tr' ? 'Eklenecek Güç' : 'Power to Add'}
+                        </Text>
+                        <View style={styles.dovizciRow}>
+                          <TextInput
+                            style={styles.dovizciInput}
+                            value={enhancePowerInput}
+                            onChangeText={setEnhancePowerInput}
+                            placeholder={lang === 'tr' ? 'miktar' : 'amount'}
+                            placeholderTextColor={COLORS.TEXT_MUTED}
+                            keyboardType="numeric"
+                            maxLength={6}
+                          />
+                          <TouchableOpacity
+                            style={[styles.dovizciConvertBtn, { backgroundColor: '#00CEC9CC' }]}
+                            onPress={handleEnhanceWeapon}
+                          >
+                            <Text style={styles.dovizciConvertBtnText}>
+                              {enhancePowerInput && !isNaN(parseInt(enhancePowerInput))
+                                ? `${(parseInt(enhancePowerInput) * ISLEYICI_TT_PER_POWER).toLocaleString()} TT + ${parseInt(enhancePowerInput) * ISLEYICI_XP_PER_POWER} XP`
+                                : (lang === 'tr' ? 'Uygula' : 'Apply')}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
+
+                    <View style={styles.dovizciBalanceRow}>
+                      <Text style={styles.dovizciBalanceText}>💰 {tikTik.toLocaleString()} TT</Text>
+                      <Text style={styles.dovizciBalanceText}>⭐ {xp.toLocaleString()} XP</Text>
+                    </View>
+                  </View>
+                </KeyboardAvoidingView>
+              </Modal>
+
+              {/* ── Şifa İşleyen Kart ── */}
+              {level >= SIFIA_ISLEYEN_UNLOCK_LEVEL && (
+                <TouchableOpacity
+                  style={styles.sifaCard}
+                  onPress={() => setShowSifaIsleyenModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.dovizciHeader}>
+                    <Text style={styles.sifaEmoji}>💊</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.sifaName}>{lang === 'tr' ? 'Şifa İşleyen' : 'HP Enhancer'}</Text>
+                      <Text style={styles.dovizciDesc}>
+                        {lang === 'tr'
+                          ? `Kalıcı can artır • Toplam bonus: +${bonusHp} ❤️`
+                          : `Permanently increase HP • Total bonus: +${bonusHp} ❤️`}
+                      </Text>
+                    </View>
+                    <View style={styles.dovizciBtnOwned}>
+                      <Text style={[styles.dovizciBtnOwnedText, { color: '#FF7675' }]}>{'›'}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.dovizciCost, { color: '#FF7675' }]}>
+                    {`${SIFIA_ISLEYEN_TT_PER_HP} TT + ${SIFIA_ISLEYEN_XP_PER_HP} XP = +1 ❤️`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* ── Şifa İşleyen Modal ── */}
+              <Modal
+                visible={showSifaIsleyenModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowSifaIsleyenModal(false)}
+              >
+                <KeyboardAvoidingView
+                  style={styles.dovizciModalOverlay}
+                  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                  <View style={[styles.dovizciModalSheet, { borderColor: '#FF767544' }]}>
+                    <View style={styles.dovizciModalHeader}>
+                      <Text style={[styles.dovizciModalTitle, { color: '#FF7675' }]}>
+                        💊 {lang === 'tr' ? 'Şifa İşleyen' : 'HP Enhancer'}
+                      </Text>
+                      <TouchableOpacity onPress={() => setShowSifaIsleyenModal(false)} style={styles.dovizciModalCloseBtn}>
+                        <Text style={styles.dovizciModalCloseText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={[styles.dovizciRateRow, { borderColor: '#FF767533' }]}>
+                      <Text style={styles.dovizciRateLabel}>
+                        {lang === 'tr' ? 'Mevcut bonus: ' : 'Current bonus: '}
+                      </Text>
+                      <Text style={[styles.dovizciRateValue, { color: '#FF7675' }]}>+{bonusHp} ❤️</Text>
+                    </View>
+
+                    <Text style={styles.dovizciSectionLabel}>
+                      {lang === 'tr' ? 'Eklenecek Can Miktarı' : 'HP Amount to Add'}
+                    </Text>
+                    <Text style={[styles.dovizciDesc, { marginBottom: SPACING.SM }]}>
+                      {lang === 'tr'
+                        ? `${SIFIA_ISLEYEN_TT_PER_HP} TıkTık + ${SIFIA_ISLEYEN_XP_PER_HP} XP = +1 kalıcı ❤️`
+                        : `${SIFIA_ISLEYEN_TT_PER_HP} TıkTık + ${SIFIA_ISLEYEN_XP_PER_HP} XP = +1 permanent ❤️`}
+                    </Text>
+
+                    <View style={styles.dovizciRow}>
+                      <TextInput
+                        style={styles.dovizciInput}
+                        value={sifaHpInput}
+                        onChangeText={setSifaHpInput}
+                        placeholder={lang === 'tr' ? 'can miktarı' : 'hp amount'}
+                        placeholderTextColor={COLORS.TEXT_MUTED}
+                        keyboardType="numeric"
+                        maxLength={6}
+                      />
+                      <TouchableOpacity
+                        style={[styles.dovizciConvertBtn, { backgroundColor: '#FF767599' }]}
+                        onPress={handleAddBonusHp}
+                      >
+                        <Text style={styles.dovizciConvertBtnText}>
+                          {sifaHpInput && !isNaN(parseInt(sifaHpInput))
+                            ? `${(parseInt(sifaHpInput) * SIFIA_ISLEYEN_TT_PER_HP).toLocaleString()} TT + ${parseInt(sifaHpInput) * SIFIA_ISLEYEN_XP_PER_HP} XP`
+                            : (lang === 'tr' ? 'Uygula' : 'Apply')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.dovizciBalanceRow}>
+                      <Text style={styles.dovizciBalanceText}>💰 {tikTik.toLocaleString()} TT</Text>
+                      <Text style={styles.dovizciBalanceText}>⭐ {xp.toLocaleString()} XP</Text>
+                    </View>
+                  </View>
+                </KeyboardAvoidingView>
               </Modal>
 
               {/* ── Dövizci Modal ── */}
@@ -928,6 +1230,47 @@ const styles = StyleSheet.create({
     borderColor: COLORS.BORDER,
   },
   dovizciBalanceText: { fontSize: 13, color: COLORS.GOLD, fontWeight: '700' },
+
+  // ── İşleyici ──
+  isleyiciCard: {
+    backgroundColor: COLORS.BG_CARD,
+    borderRadius: RADIUS.LG,
+    padding: SPACING.MD,
+    marginBottom: SPACING.MD,
+    borderWidth: 1.5,
+    borderColor: '#00CEC955',
+  },
+  isleyiciEmoji: { fontSize: 40 },
+  isleyiciName: { fontSize: 16, fontWeight: '900', color: '#00CEC9' },
+  isleyiciBtnActive: { backgroundColor: '#00CEC9' },
+  isleyiciBtnText: { color: COLORS.BG_DARK, fontWeight: '900', fontSize: 13 },
+  isleyiciWeaponRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.BG_ELEVATED,
+    borderRadius: RADIUS.MD,
+    padding: SPACING.SM,
+    marginBottom: SPACING.XS,
+    gap: SPACING.SM,
+    borderWidth: 1,
+    borderColor: COLORS.BORDER,
+  },
+  isleyiciWeaponRowSelected: {
+    borderColor: '#00CEC9',
+    backgroundColor: '#00CEC911',
+  },
+
+  // ── Şifa İşleyen ──
+  sifaCard: {
+    backgroundColor: COLORS.BG_CARD,
+    borderRadius: RADIUS.LG,
+    padding: SPACING.MD,
+    marginBottom: SPACING.MD,
+    borderWidth: 1.5,
+    borderColor: '#FF767555',
+  },
+  sifaEmoji: { fontSize: 40 },
+  sifaName: { fontSize: 16, fontWeight: '900', color: '#FF7675' },
 
   // ── Silah Tüccarı ──
   silahCard: {

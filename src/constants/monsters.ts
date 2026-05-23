@@ -553,16 +553,21 @@ export const LEVEL_XP_THRESHOLDS: number[] = [
 export const getMonsterById = (id: number): Monster =>
   MONSTERS.find((m) => m.id === id) ?? MONSTERS[0];
 
+const BEYOND_LEVEL_BASE_XP = LEVEL_XP_THRESHOLDS[LEVEL_XP_THRESHOLDS.length - 1]; // 470000
+const BEYOND_LEVEL_STEP = 5000;
+const TABLE_MAX_LEVEL = LEVEL_XP_THRESHOLDS.length; // 100
+
 export const getLevelFromXp = (xp: number): number => {
-  let level = 1;
-  for (let i = LEVEL_XP_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (xp >= LEVEL_XP_THRESHOLDS[i]) {
-      level = i + 1;
-      break;
-    }
+  if (xp >= BEYOND_LEVEL_BASE_XP) {
+    return TABLE_MAX_LEVEL + Math.floor((xp - BEYOND_LEVEL_BASE_XP) / BEYOND_LEVEL_STEP);
   }
-  return level;
+  for (let i = TABLE_MAX_LEVEL - 1; i >= 0; i--) {
+    if (xp >= LEVEL_XP_THRESHOLDS[i]) return i + 1;
+  }
+  return 1;
 };
 
-export const getNextLevelXp = (level: number): number =>
-  LEVEL_XP_THRESHOLDS[level] ?? LEVEL_XP_THRESHOLDS[LEVEL_XP_THRESHOLDS.length - 1];
+export const getNextLevelXp = (level: number): number => {
+  if (level < TABLE_MAX_LEVEL) return LEVEL_XP_THRESHOLDS[level];
+  return BEYOND_LEVEL_BASE_XP + (level - TABLE_MAX_LEVEL + 1) * BEYOND_LEVEL_STEP;
+};

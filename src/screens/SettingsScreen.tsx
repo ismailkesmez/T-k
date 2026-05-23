@@ -31,6 +31,9 @@ export default function SettingsScreen() {
   const [adminXp, setAdminXp] = useState('');
   const [adminTikTik, setAdminTikTik] = useState('');
   const [adminClickPower, setAdminClickPower] = useState('');
+  const [adminSlimeUse, setAdminSlimeUse] = useState('');
+
+  const slimeSwordUseCount = useGameStore((s) => s.slimeSwordUseCount);
 
   const seqStepRef = useRef(0);
   const seqStartTimeRef = useRef(0);
@@ -128,6 +131,18 @@ export default function SettingsScreen() {
     Alert.alert('✓', `Tıklama gücü ${cp} olarak ayarlandı`);
   };
 
+  const handleSetSlimeUse = () => {
+    const val = parseInt(adminSlimeUse, 10);
+    if (isNaN(val) || val < 0) {
+      Alert.alert('', 'Geçerli bir sayı girin (min 0)');
+      return;
+    }
+    useGameStore.setState({ slimeSwordUseCount: val });
+    setAdminSlimeUse('');
+    const stage = val >= 200 ? 'Mutlak Slime Kılıcı' : val >= 100 ? 'Çifte Slime Kılıcı' : 'Slime Kılıcı';
+    Alert.alert('✓', `Kullanım sayısı ${val} → ${stage}`);
+  };
+
   const handleUnlockAllMonsters = () => {
     useGameStore.setState({ unlockedMonsters: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] });
     Alert.alert('✓', 'Tüm canavarlar açıldı!');
@@ -217,7 +232,7 @@ export default function SettingsScreen() {
       {/* Uygulama bilgisi */}
       <View style={styles.appInfo}>
         <Text style={styles.appName}>TıkTık</Text>
-        <Text style={styles.appVersion}>{t(lang, 'settings_version')} V0.3</Text>
+        <Text style={styles.appVersion}>{t(lang, 'settings_version')} V0.4</Text>
         <Text style={styles.appBy}>{t(lang, 'settings_by')} Kesmez</Text>
       </View>
 
@@ -343,6 +358,32 @@ export default function SettingsScreen() {
                   maxLength={8}
                 />
                 <TouchableOpacity style={styles.adminSetBtn} onPress={handleSetClickPower}>
+                  <Text style={styles.adminSetBtnText}>Ayarla</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Slime Kılıcı Evrim */}
+              <Text style={styles.adminLabel}>
+                🫧 Slime Kılıcı Kullanım Sayısı
+              </Text>
+              <Text style={styles.adminStageBadge}>
+                {slimeSwordUseCount >= 200
+                  ? `✕ Mutlak (${slimeSwordUseCount})`
+                  : slimeSwordUseCount >= 100
+                  ? `🫧🫧 Çifte (${slimeSwordUseCount})`
+                  : `🫧 Slime (${slimeSwordUseCount})`}
+              </Text>
+              <View style={styles.adminRow}>
+                <TextInput
+                  style={styles.adminInput}
+                  value={adminSlimeUse}
+                  onChangeText={setAdminSlimeUse}
+                  placeholder="0 / 100 / 200"
+                  placeholderTextColor={COLORS.TEXT_MUTED}
+                  keyboardType="numeric"
+                  maxLength={5}
+                />
+                <TouchableOpacity style={styles.adminSetBtn} onPress={handleSetSlimeUse}>
                   <Text style={styles.adminSetBtnText}>Ayarla</Text>
                 </TouchableOpacity>
               </View>
@@ -482,6 +523,12 @@ const styles = StyleSheet.create({
     marginTop: SPACING.MD,
     marginBottom: SPACING.XS,
     letterSpacing: 0.8,
+  },
+  adminStageBadge: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#A29BFE',
+    marginBottom: SPACING.XS,
   },
   adminRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.SM },
   adminInput: {

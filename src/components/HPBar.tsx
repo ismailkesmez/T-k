@@ -27,7 +27,7 @@ export default function HPBar({ current, max, color = COLORS.PRIMARY, showLabel 
     <View style={styles.container}>
       {showLabel && (
         <Text style={styles.label}>
-          {current} / {max}
+          {Math.floor(current).toLocaleString()} / {Math.floor(max).toLocaleString()}
         </Text>
       )}
       <View style={styles.track}>

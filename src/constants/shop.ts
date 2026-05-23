@@ -83,19 +83,25 @@ export interface XpStorageUpgrade {
   level: number;
   capacity: number;
   xpCost: number;
+  requiresLevel?: number;
+  requiresOgreDefeats?: number;
 }
 
 export const XP_STORAGE_UPGRADES: XpStorageUpgrade[] = [
-  { level: 1, capacity: 1000,  xpCost: 500 },
-  { level: 2, capacity: 2000,  xpCost: 1000 },
-  { level: 3, capacity: 3000,  xpCost: 1500 },
-  { level: 4, capacity: 5000,  xpCost: 2500 },
-  { level: 5, capacity: 10000, xpCost: 5000 },
-  { level: 6, capacity: 20000, xpCost: 10000 },
+  { level: 1,  capacity: 1000,   xpCost: 500 },
+  { level: 2,  capacity: 2000,   xpCost: 1000 },
+  { level: 3,  capacity: 3000,   xpCost: 1500 },
+  { level: 4,  capacity: 5000,   xpCost: 2500 },
+  { level: 5,  capacity: 10000,  xpCost: 5000 },
+  { level: 6,  capacity: 20000,  xpCost: 10000 },
+  { level: 7,  capacity: 40000,  xpCost: 20000 },
+  { level: 8,  capacity: 80000,  xpCost: 40000 },
+  { level: 9,  capacity: 120000, xpCost: 60000 },
+  { level: 10, capacity: 250000, xpCost: 125000, requiresLevel: 100, requiresOgreDefeats: 5 },
 ];
 
 export const getXpStorageCapacity = (level: number): number => {
-  const capacities = [500, 1000, 2000, 3000, 5000, 10000, 20000];
+  const capacities = [500, 1000, 2000, 3000, 5000, 10000, 20000, 40000, 80000, 120000, 250000];
   return capacities[level] ?? 500;
 };
 
@@ -132,11 +138,28 @@ export function getDovizciRates(level: number): DovizciRates {
   return                  { xpToTikTik: 10,  tikTikToXp: null };
 }
 
+export const SLIME_SWORD_EVOLUTION_COUNT = 100;
+export const SLIME_SWORD_FINAL_COUNT = 200;
+
+export const SIFIA_ISLEYEN_UNLOCK_LEVEL = 50;
+export const SIFIA_ISLEYEN_TT_PER_HP = 100;
+export const SIFIA_ISLEYEN_XP_PER_HP = 10;
+
 export const DOVIZCI_COST_TIKTIK = 5000;
 export const DOVIZCI_COST_XP     = 500;
 
 export const SILAH_TUCCARI_COST_TIKTIK = 10000;
 export const SILAH_TUCCARI_COST_XP     = 1000;
+
+export const ISLEYICI_COST_TIKTIK = 1_000_000;
+export const ISLEYICI_TT_PER_POWER = 1_000;   // 1 güç = 1000 TıkTık
+export const ISLEYICI_XP_PER_POWER = 10;       // 1 güç = 10 XP
+
+export interface EnhancedWeapon {
+  instanceId: string;    // e.g. "golem_gloves_enhanced"
+  baseWeaponId: string;  // e.g. "golem_gloves"
+  enhancement: number;   // toplam eklenen güç
+}
 
 export const EQUIPMENT_SLOT_UNLOCK_LEVELS = [5, 26, 75];
 
@@ -199,5 +222,15 @@ export const WEAPONS: Weapon[] = [
     bonusValue: 0.25,
     requiresLevel: 50,
     requiresMonsterDefeats: { monsterId: 14, count: 2 },
+  },
+  {
+    id: 'gumus_kilic',
+    nameKey: 'weapon_gumus_kilic',
+    descKey: 'weapon_gumus_kilic_desc',
+    emoji: '🥈',
+    cost: 100000,
+    bonusType: 'damage_percent',
+    bonusValue: 0.10,
+    requiresMonsterDefeats: { monsterId: 2, count: 50 },
   },
 ];

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { useGameStore } from '../store/gameStore';
 import { getMonsterById, getNextLevelXp, LEVEL_XP_THRESHOLDS } from '../constants/monsters';
-import { WEAPONS, getEquipmentSlots, EQUIPMENT_SLOT_UNLOCK_LEVELS } from '../constants/shop';
+import { WEAPONS, getEquipmentSlots, EQUIPMENT_SLOT_UNLOCK_LEVELS, EnhancedWeapon } from '../constants/shop';
 import { t } from '../i18n';
 import { COLORS, FONTS, RADIUS, SPACING } from '../constants/theme';
 
@@ -22,8 +22,10 @@ export default function ProfileScreen() {
   const dailyStreak = useGameStore((s) => s.dailyStreak);
   const purchasedWeapons = useGameStore((s) => s.purchasedWeapons);
   const equippedWeapons = useGameStore((s) => s.equippedWeapons);
+  const enhancedWeapons = useGameStore((s) => s.enhancedWeapons);
   const equipWeapon = useGameStore((s) => s.equipWeapon);
   const unequipWeapon = useGameStore((s) => s.unequipWeapon);
+  const slimeSwordUseCount = useGameStore((s) => s.slimeSwordUseCount);
 
   const [showEquipModal, setShowEquipModal] = useState(false);
 
@@ -167,6 +169,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
 
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SPACING.LG }}>
             {/* Slot overview */}
             <Text style={styles.modalSectionLabel}>
               {lang === 'tr' ? `Aktif Slotlar  ${equippedWeapons.length}/${slots}` : `Active Slots  ${equippedWeapons.length}/${slots}`}
@@ -175,7 +178,12 @@ export default function ProfileScreen() {
               {EQUIPMENT_SLOT_UNLOCK_LEVELS.map((reqLevel, i) => {
                 const unlocked = level >= reqLevel;
                 const equippedId = equippedWeapons[i];
-                const weapon = equippedId ? WEAPONS.find((w) => w.id === equippedId) : null;
+                const baseWeapon = equippedId ? WEAPONS.find((w) => w.id === equippedId) : null;
+                const enh = equippedId ? enhancedWeapons.find((e) => e.instanceId === equippedId) : null;
+                const weapon = baseWeapon ?? (enh ? WEAPONS.find((w) => w.id === enh.baseWeaponId) : null);
+                const displayName = weapon
+                  ? t(lang, weapon.nameKey as any) + (enh ? ` +${enh.enhancement}` : '')
+                  : null;
                 return (
                   <View
                     key={i}
@@ -192,12 +200,10 @@ export default function ProfileScreen() {
                     ) : weapon ? (
                       <>
                         <Text style={styles.slotWeaponEmoji}>{weapon.emoji}</Text>
-                        <Text style={styles.slotWeaponName} numberOfLines={2}>
-                          {t(lang, weapon.nameKey as any)}
-                        </Text>
+                        <Text style={styles.slotWeaponName} numberOfLines={2}>{displayName}</Text>
                         <TouchableOpacity
                           style={styles.slotRemoveBtn}
-                          onPress={() => unequipWeapon(weapon.id)}
+                          onPress={() => unequipWeapon(equippedId!)}
                         >
                           <Text style={styles.slotRemoveBtnText}>
                             {lang === 'tr' ? 'Çıkar' : 'Remove'}
@@ -216,7 +222,7 @@ export default function ProfileScreen() {
             <Text style={styles.modalSectionLabel}>
               {lang === 'tr' ? 'Envanter' : 'Inventory'}
             </Text>
-            {purchasedWeapons.length === 0 ? (
+            {purchasedWeapons.length === 0 && enhancedWeapons.length === 0 ? (
               <View style={styles.emptyInventory}>
                 <Text style={styles.emptyInventoryText}>
                   {lang === 'tr'
@@ -225,53 +231,96 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             ) : (
-              purchasedWeapons.map((wId) => {
-                const weapon = WEAPONS.find((w) => w.id === wId);
-                if (!weapon) return null;
-                const isEquipped = equippedWeapons.includes(wId);
-                const canEquip = !isEquipped && equippedWeapons.length < slots;
-                const noSlots = !isEquipped && slots === 0;
-                return (
-                  <View key={wId} style={[styles.inventoryRow, isEquipped && styles.inventoryRowEquipped]}>
-                    <Text style={styles.inventoryEmoji}>{weapon.emoji}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.inventoryName}>{t(lang, weapon.nameKey as any)}</Text>
-                      <Text style={styles.inventoryBonus}>
-                        {t(lang, weapon.descKey as any)}
-                      </Text>
-                      {isEquipped && (
-                        <Text style={styles.equippedTag}>
-                          {lang === 'tr' ? '✓ Kuşanıldı' : '✓ Equipped'}
+              <>
+                {purchasedWeapons.map((wId) => {
+                  const weapon = WEAPONS.find((w) => w.id === wId);
+                  if (!weapon) return null;
+                  const isEquipped = equippedWeapons.includes(wId);
+                  const canEquip = !isEquipped && equippedWeapons.length < slots;
+                  const noSlots = !isEquipped && slots === 0;
+                  return (
+                    <View key={wId} style={[styles.inventoryRow, isEquipped && styles.inventoryRowEquipped]}>
+                      <Text style={styles.inventoryEmoji}>{weapon.emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.inventoryName}>
+                          {wId === 'slime_sword'
+                            ? t(lang, (slimeSwordUseCount >= 200 ? 'weapon_slime_sword_final' : slimeSwordUseCount >= 100 ? 'weapon_slime_sword_evolved' : 'weapon_slime_sword') as any)
+                            : t(lang, weapon.nameKey as any)}
                         </Text>
-                      )}
-                      {noSlots && (
-                        <Text style={styles.noSlotTag}>
-                          {lang === 'tr' ? '⚠ Lv.5 gerekir' : '⚠ Requires Lv.5'}
+                        <Text style={styles.inventoryBonus}>
+                          {wId === 'slime_sword'
+                            ? t(lang, (slimeSwordUseCount >= 200 ? 'weapon_slime_sword_final_desc' : slimeSwordUseCount >= 100 ? 'weapon_slime_sword_evolved_desc' : 'weapon_slime_sword_desc') as any)
+                            : t(lang, weapon.descKey as any)}
                         </Text>
-                      )}
+                        {wId === 'slime_sword' && slimeSwordUseCount < 200 && (
+                          <Text style={styles.inventoryBonus}>
+                            {lang === 'tr'
+                              ? `${slimeSwordUseCount}/${slimeSwordUseCount >= 100 ? 200 : 100} kullanım`
+                              : `${slimeSwordUseCount}/${slimeSwordUseCount >= 100 ? 200 : 100} uses`}
+                          </Text>
+                        )}
+                        {isEquipped && <Text style={styles.equippedTag}>{lang === 'tr' ? '✓ Kuşanıldı' : '✓ Equipped'}</Text>}
+                        {noSlots && <Text style={styles.noSlotTag}>{lang === 'tr' ? '⚠ Lv.5 gerekir' : '⚠ Requires Lv.5'}</Text>}
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.equipToggleBtn, isEquipped ? styles.unequipBtnStyle : canEquip ? styles.equipBtnActive : styles.equipBtnLocked]}
+                        onPress={() => (isEquipped ? unequipWeapon(wId) : equipWeapon(wId))}
+                        disabled={!isEquipped && !canEquip}
+                      >
+                        <Text style={styles.equipToggleBtnText}>
+                          {isEquipped ? (lang === 'tr' ? 'Çıkar' : 'Remove') : canEquip ? (lang === 'tr' ? 'Kuşan' : 'Equip') : (lang === 'tr' ? 'Dolu' : 'Full')}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={[
-                        styles.equipToggleBtn,
-                        isEquipped ? styles.unequipBtnStyle
-                          : canEquip ? styles.equipBtnActive
-                          : styles.equipBtnLocked,
-                      ]}
-                      onPress={() => (isEquipped ? unequipWeapon(wId) : equipWeapon(wId))}
-                      disabled={!isEquipped && !canEquip}
-                    >
-                      <Text style={styles.equipToggleBtnText}>
-                        {isEquipped
-                          ? (lang === 'tr' ? 'Çıkar' : 'Remove')
-                          : canEquip
-                          ? (lang === 'tr' ? 'Kuşan' : 'Equip')
-                          : (lang === 'tr' ? 'Dolu' : 'Full')}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })
+                  );
+                })}
+                {enhancedWeapons.map((enh) => {
+                  const weapon = WEAPONS.find((w) => w.id === enh.baseWeaponId);
+                  if (!weapon) return null;
+                  const isEquipped = equippedWeapons.includes(enh.instanceId);
+                  const canEquip = !isEquipped && equippedWeapons.length < slots;
+                  const noSlots = !isEquipped && slots === 0;
+                  const isSlimeSword = weapon.id === 'slime_sword';
+                  const slimeStage = isSlimeSword ? (slimeSwordUseCount >= 200 ? 2 : slimeSwordUseCount >= 100 ? 1 : 0) : 0;
+                  const slimeNameKey = slimeStage === 2 ? 'weapon_slime_sword_final' : slimeStage === 1 ? 'weapon_slime_sword_evolved' : 'weapon_slime_sword';
+                  const slimeDescKey = slimeStage === 2 ? 'weapon_slime_sword_final_desc' : slimeStage === 1 ? 'weapon_slime_sword_evolved_desc' : 'weapon_slime_sword_desc';
+                  const baseName = isSlimeSword ? t(lang, slimeNameKey as any) : t(lang, weapon.nameKey as any);
+                  const displayName = `${baseName} +${enh.enhancement}`;
+                  return (
+                    <View key={enh.instanceId} style={[styles.inventoryRow, isEquipped && styles.inventoryRowEquipped]}>
+                      <Text style={styles.inventoryEmoji}>{weapon.emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.inventoryName}>{displayName}</Text>
+                        <Text style={styles.inventoryBonus}>
+                          {isSlimeSword
+                            ? t(lang, slimeDescKey as any)
+                            : t(lang, weapon.descKey as any)}
+                        </Text>
+                        {isSlimeSword && slimeSwordUseCount < 200 && (
+                          <Text style={styles.inventoryBonus}>
+                            {lang === 'tr'
+                              ? `${slimeSwordUseCount}/${slimeSwordUseCount >= 100 ? 200 : 100} kullanım`
+                              : `${slimeSwordUseCount}/${slimeSwordUseCount >= 100 ? 200 : 100} uses`}
+                          </Text>
+                        )}
+                        {isEquipped && <Text style={styles.equippedTag}>{lang === 'tr' ? '✓ Kuşanıldı' : '✓ Equipped'}</Text>}
+                        {noSlots && <Text style={styles.noSlotTag}>{lang === 'tr' ? '⚠ Lv.5 gerekir' : '⚠ Requires Lv.5'}</Text>}
+                      </View>
+                      <TouchableOpacity
+                        style={[styles.equipToggleBtn, isEquipped ? styles.unequipBtnStyle : canEquip ? styles.equipBtnActive : styles.equipBtnLocked]}
+                        onPress={() => (isEquipped ? unequipWeapon(enh.instanceId) : equipWeapon(enh.instanceId))}
+                        disabled={!isEquipped && !canEquip}
+                      >
+                        <Text style={styles.equipToggleBtnText}>
+                          {isEquipped ? (lang === 'tr' ? 'Çıkar' : 'Remove') : canEquip ? (lang === 'tr' ? 'Kuşan' : 'Equip') : (lang === 'tr' ? 'Dolu' : 'Full')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </>
             )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
