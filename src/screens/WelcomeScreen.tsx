@@ -27,6 +27,7 @@ export default function WelcomeScreen() {
   const setNicknameFn = useGameStore((s) => s.setNickname);
   const setGenderFn = useGameStore((s) => s.setGender);
   const lang = useGameStore((s) => s.language);
+  const setLanguage = useGameStore((s) => s.setLanguage);
   const shake = React.useRef(new Animated.Value(0)).current;
 
   const handleStart = () => {
@@ -65,6 +66,22 @@ export default function WelcomeScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <StatusBar style="light" />
+
+      {/* Language toggle */}
+      <View style={styles.langRow}>
+        {(['tr', 'en'] as const).map((l) => (
+          <TouchableOpacity
+            key={l}
+            style={[styles.langBtn, lang === l && styles.langBtnActive]}
+            onPress={() => setLanguage(l)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.langBtnText, lang === l && styles.langBtnTextActive]}>
+              {l === 'tr' ? 'TR' : 'EN'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <View style={styles.logoContainer}>
         <Text style={styles.logoEmoji}>👾</Text>
@@ -246,6 +263,31 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  langRow: {
+    flexDirection: 'row',
+    alignSelf: 'flex-end',
+    gap: SPACING.XS,
+    marginBottom: SPACING.MD,
+  },
+  langBtn: {
+    paddingHorizontal: SPACING.MD,
+    paddingVertical: 5,
+    borderRadius: RADIUS.FULL,
+    borderWidth: 1.5,
+    borderColor: COLORS.BORDER,
+  },
+  langBtnActive: {
+    borderColor: COLORS.PRIMARY,
+    backgroundColor: 'rgba(255,71,87,0.12)',
+  },
+  langBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLORS.TEXT_MUTED,
+  },
+  langBtnTextActive: {
+    color: COLORS.PRIMARY,
   },
   decorRow: {
     flexDirection: 'row',

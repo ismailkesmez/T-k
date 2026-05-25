@@ -78,6 +78,24 @@ export default function MonsterScreen() {
   const bubbleSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const crossModeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fusionModeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearCountdown = () => {
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    setSecondsLeft(0);
+  };
+
+  const startCountdown = (seconds: number) => {
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    setSecondsLeft(seconds);
+    countdownRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) { clearInterval(countdownRef.current!); countdownRef.current = null; return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
   const monster = getMonsterById(activeMonsterId);
   const slimeKilicEquipped = equippedWeapons.some((id) => {
@@ -131,6 +149,7 @@ export default function MonsterScreen() {
     setCursed(false);
     fusionModeRef.current = false;
     setFusionMode(false);
+    clearCountdown();
     if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
     if (bubbleSuppressTimerRef.current) { clearTimeout(bubbleSuppressTimerRef.current); bubbleSuppressTimerRef.current = null; }
     if (crossModeTimerRef.current) { clearTimeout(crossModeTimerRef.current); crossModeTimerRef.current = null; }
@@ -144,6 +163,7 @@ export default function MonsterScreen() {
       if (bubbleSuppressTimerRef.current) clearTimeout(bubbleSuppressTimerRef.current);
       if (crossModeTimerRef.current) clearTimeout(crossModeTimerRef.current);
       if (fusionModeTimerRef.current) clearTimeout(fusionModeTimerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, []);
 
@@ -244,29 +264,34 @@ export default function MonsterScreen() {
           fusionModeRef.current = true;
           setFusionMode(true);
           setBubblesSuppressed(true);
+          startCountdown(10);
           if (bubbleSuppressTimerRef.current) clearTimeout(bubbleSuppressTimerRef.current);
           if (fusionModeTimerRef.current) clearTimeout(fusionModeTimerRef.current);
           const endFusion = () => {
             fusionModeRef.current = false;
             setFusionMode(false);
             setBubblesSuppressed(false);
+            clearCountdown();
           };
           fusionModeTimerRef.current = setTimeout(endFusion, 10000);
         } else if (slimeMutlakEquipped) {
           // Mutlak: cross mode — bubbles become ✕ attack targets for 10s
           crossModeRef.current = true;
           setCrossMode(true);
+          startCountdown(10);
           if (crossModeTimerRef.current) clearTimeout(crossModeTimerRef.current);
           crossModeTimerRef.current = setTimeout(() => {
             crossModeRef.current = false;
             setCrossMode(false);
+            clearCountdown();
           }, 10000);
         } else {
           // Slime / Çifte: suppress mode
           setBubblesSuppressed(true);
           if (bubbleSuppressTimerRef.current) clearTimeout(bubbleSuppressTimerRef.current);
           const suppressDuration = slimeSwordStage === 1 ? 20000 : 10000;
-          bubbleSuppressTimerRef.current = setTimeout(() => setBubblesSuppressed(false), suppressDuration);
+          startCountdown(suppressDuration / 1000);
+          bubbleSuppressTimerRef.current = setTimeout(() => { setBubblesSuppressed(false); clearCountdown(); }, suppressDuration);
         }
       }, holdDuration);
     }
@@ -319,7 +344,13 @@ export default function MonsterScreen() {
           setCursed(false);
           crossModeRef.current = false;
           setCrossMode(false);
+          fusionModeRef.current = false;
+          setFusionMode(false);
+          setBubblesSuppressed(false);
+          clearCountdown();
           if (crossModeTimerRef.current) { clearTimeout(crossModeTimerRef.current); crossModeTimerRef.current = null; }
+          if (fusionModeTimerRef.current) { clearTimeout(fusionModeTimerRef.current); fusionModeTimerRef.current = null; }
+          if (bubbleSuppressTimerRef.current) { clearTimeout(bubbleSuppressTimerRef.current); bubbleSuppressTimerRef.current = null; }
           addFloating(
             playAreaSize.width / 2,
             playAreaSize.height / 3,
@@ -359,7 +390,9 @@ export default function MonsterScreen() {
             fusionModeRef.current = false;
             setFusionMode(false);
             setBubblesSuppressed(false);
+            clearCountdown();
             if (fusionModeTimerRef.current) { clearTimeout(fusionModeTimerRef.current); fusionModeTimerRef.current = null; }
+            if (bubbleSuppressTimerRef.current) { clearTimeout(bubbleSuppressTimerRef.current); bubbleSuppressTimerRef.current = null; }
             addFloating(
               playAreaSize.width / 2,
               playAreaSize.height / 3,
@@ -661,8 +694,8 @@ export default function MonsterScreen() {
         <View style={styles.suppressBar}>
           <Text style={styles.suppressText}>
             🫧 {lang === 'tr'
-              ? `Baloncuklar engellendi — ${slimeKilicEvolved ? '20s' : '10s'}`
-              : `Bubbles suppressed — ${slimeKilicEvolved ? '20s' : '10s'}`}
+              ? `Baloncuklar engellendi — ${secondsLeft}s`
+              : `Bubbles suppressed — ${secondsLeft}s`}
           </Text>
         </View>
       )}
@@ -670,7 +703,7 @@ export default function MonsterScreen() {
       {fusionMode && (
         <View style={styles.fusionModeBar}>
           <Text style={styles.fusionModeText}>
-            ✨ {lang === 'tr' ? 'Füzyon Mod — 10s • Her vuruş 3× hasar' : 'Fusion Mode — 10s • Each hit deals 3× damage'}
+            ✨ {lang === 'tr' ? `Füzyon Mod — ${secondsLeft}s • Her vuruş 3× hasar` : `Fusion Mode — ${secondsLeft}s • Each hit deals 3× damage`}
           </Text>
         </View>
       )}
@@ -678,7 +711,7 @@ export default function MonsterScreen() {
       {crossMode && (
         <View style={styles.crossModeBar}>
           <Text style={styles.crossModeText}>
-            ✕ {lang === 'tr' ? 'Mutlak Mod — 10s • Her ✕ 2× hasar' : 'Absolute Mode — 10s • Each ✕ deals 2× damage'}
+            ✕ {lang === 'tr' ? `Mutlak Mod — ${secondsLeft}s • Her ✕ 2× hasar` : `Absolute Mode — ${secondsLeft}s • Each ✕ deals 2× damage`}
           </Text>
         </View>
       )}
